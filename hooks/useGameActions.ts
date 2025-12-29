@@ -133,21 +133,50 @@ export function useGameActions({
 
     try {
       setError('');
-      // Try to call API endpoint, if it doesn't exist, handle client-side
+      
+      // First, end the current turn by holding (if there's a round score to add)
+      let finalGameState = game;
+      
+      // Check if current player has a round score that needs to be added
+      const currentPlayer = game.currentPlayerId === game.player1.id ? game.player1 : game.player2;
+      const currentRoundScore = game.currentPlayerId === game.player1.id 
+        ? game.player1RoundScore 
+        : game.player2RoundScore;
+      
+      // If there's a round score, hold first to add it to the total
+      if (currentRoundScore > 0) {
+        try {
+          const holdResponse = await apiClient.hold(game.id);
+          finalGameState = holdResponse.gameState;
+          onGameUpdate(finalGameState);
+          
+          // Track win if game ended after hold
+          if (holdResponse.isGameOver && holdResponse.winnerId) {
+            storage.incrementWin(holdResponse.winnerId);
+            soundManager.playWin();
+            return; // Game already ended, no need to call endGame
+          }
+        } catch (holdError: any) {
+          console.warn('Failed to hold before ending game:', holdError);
+          // Continue with ending game even if hold fails
+        }
+      }
+      
+      // Now end the game and determine winner
       try {
-        const updatedGame = await apiClient.endGame(game.id);
+        const updatedGame = await apiClient.endGame(finalGameState.id);
         onGameUpdate(updatedGame);
       } catch (apiError: any) {
         // If API endpoint doesn't exist, determine winner client-side
         console.log('API endpoint not available, determining winner client-side');
-        const winnerId = game.player1Score > game.player2Score 
-          ? game.player1.id 
-          : game.player2Score > game.player1Score 
-          ? game.player2.id 
+        const winnerId = finalGameState.player1Score > finalGameState.player2Score 
+          ? finalGameState.player1.id 
+          : finalGameState.player2Score > finalGameState.player1Score 
+          ? finalGameState.player2.id 
           : undefined; // Tie
         
         const winner = winnerId 
-          ? (winnerId === game.player1.id ? game.player1 : game.player2)
+          ? (winnerId === finalGameState.player1.id ? finalGameState.player1 : finalGameState.player2)
           : null;
         
         if (winner) {
@@ -160,7 +189,7 @@ export function useGameActions({
         
         // Update game state to finished
         onGameUpdate({
-          ...game,
+          ...finalGameState,
           status: 'finished',
           winnerId: winnerId, // undefined for ties
         });

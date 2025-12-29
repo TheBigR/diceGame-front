@@ -69,7 +69,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       setDiceRolling(true);
       const timer = setTimeout(() => {
         setDiceRolling(false);
-      }, 15900); // Stop after 1.5 seconds
+      }, 1500); // Stop after 1.5 seconds
       return () => clearTimeout(timer);
     } else {
       // Stop rolling immediately if isRolling becomes false
@@ -88,11 +88,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
         onClose={() => setShowDoubleSixMessage(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{
-          sx: {
-            position: 'relative',
-            textAlign: 'center',
-            p: 3,
+        slotProps={{
+          paper: {
+            sx: {
+              position: 'relative',
+              textAlign: 'center',
+              p: 3,
+            },
           },
         }}
       >
@@ -139,7 +141,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       )}
 
       {/* Player Scores */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 1 }}>
         {/* Player 1 */}
         <Paper
           elevation={game.currentPlayerId === game.player1.id ? 4 : 1}
@@ -208,7 +210,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       </Box>
 
       {/* Dice Display */}
-      <Paper sx={{ bgcolor: 'grey.100', p: 4, mb: 3, textAlign: 'center', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <Paper sx={{ bgcolor: 'grey.100', p: 4, mb: 1.5, textAlign: 'center', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3, mb: 2, minHeight: '120px' }}>
           {lastRoll ? (
             <>

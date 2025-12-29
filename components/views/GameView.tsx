@@ -63,7 +63,7 @@ export default function GameView({
       />
 
       {error && (
-        <Box sx={{ maxWidth: '56rem', mx: 'auto', mb: 2 }}>
+        <Box sx={{ maxWidth: '56rem', mx: 'auto', mb: 0.1 }}>
           <Alert severity="error">{error}</Alert>
         </Box>
       )}

@@ -39,9 +39,8 @@ export default function NavBar({
     <Paper
       elevation={3}
       sx={{
-        mb: 3,
-        px: 3,
-        py: 2,
+        mb: 0.1,
+        px: 3,        
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -55,7 +54,7 @@ export default function NavBar({
         borderRadius: 2,
       }}
     >
-      {/* Left: Title */}
+ 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: '0 0 auto', zIndex: 1 }}>
         <Box
           sx={{
@@ -72,6 +71,7 @@ export default function NavBar({
         >
           <CasinoIcon />
         </Box>
+        <Box>
         <Typography 
           variant="h5" 
           component="h1" 
@@ -83,20 +83,6 @@ export default function NavBar({
         >
           Dice Game
         </Typography>
-      </Box>
-
-      {/* Center: Welcome Message */}
-      <Box sx={{ 
-        position: 'absolute', 
-        left: '50%', 
-        transform: 'translateX(-50%)',
-        flex: '0 0 auto',
-        zIndex: 1,
-        px: 2,
-        py: 0.5,
-        borderRadius: 1,
-        bgcolor: 'action.hover',
-      }}>
         <Typography 
           variant="body2" 
           sx={{ 
@@ -107,7 +93,10 @@ export default function NavBar({
         >
           Welcome, <strong>{username}</strong>!
         </Typography>
+        </Box>
       </Box>
+
+
 
       {/* Right: Buttons */}
       <Box sx={{ display: 'flex', gap: 1, flex: '0 0 auto', ml: 'auto', zIndex: 1 }}>

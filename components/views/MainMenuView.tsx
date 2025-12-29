@@ -40,8 +40,8 @@ export default function MainMenuView({
           </Alert>
         )}
 
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Paper elevation={3} sx={{ p: 4, mt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, }}>
             <Button
               variant="contained"
               size="large"
