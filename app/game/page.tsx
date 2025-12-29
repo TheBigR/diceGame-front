@@ -2,39 +2,52 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
-import { GameState, DiceRoll } from '@/types';
-import { apiClient } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { GameState } from '@/types';
 import GameBoard from '@/components/GameBoard';
-import { storage } from '@/lib/storage';
+import CreateGameForm from '@/components/CreateGameForm';
 import { soundManager } from '@/lib/sounds';
 import { useAIPlayer } from '@/hooks/useAIPlayer';
-import { Box, Button, Typography, Alert, IconButton, Tooltip, Paper, CircularProgress, TextField, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { useGameActions } from '@/hooks/useGameActions';
+import { useGameManagement } from '@/hooks/useGameManagement';
+import { Box, Button, Typography, Alert, IconButton, Tooltip, Paper, CircularProgress, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import CasinoIcon from '@mui/icons-material/Casino';
 import AddIcon from '@mui/icons-material/Add';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import LogoutIcon from '@mui/icons-material/Logout';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
 import DeleteIcon from '@mui/icons-material/Delete';
-
-type ViewMode = 'menu' | 'create' | 'game' | 'games-list';
 
 export default function GamePage() {
   const { user, logout, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<ViewMode>('menu');
   const [game, setGame] = useState<GameState | null>(null);
-  const [availableGames, setAvailableGames] = useState<GameState[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isRolling, setIsRolling] = useState(false);
-  const [lastRoll, setLastRoll] = useState<DiceRoll | null>(null);
-  const [isDoubleSix, setIsDoubleSix] = useState(false);
-  const [error, setError] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [abandonDialogOpen, setAbandonDialogOpen] = useState(false);
   
-  // AI Player hook
+  // Game Actions hook - manages roll, hold, newGame, endGame
+  const {
+    isRolling,
+    lastRoll,
+    isDoubleSix,
+    error: actionsError,
+    setError: setActionsError,
+    handleRoll,
+    handleHold,
+    handleNewGame,
+    handleEndGame,
+    clearGameState,
+    setLastRoll,
+    setIsDoubleSix,
+  } = useGameActions({
+    game,
+    onGameUpdate: setGame,
+    isAIGame: undefined, // Will be set after AI hook
+    restoreAIForGame: undefined, // Will be set after AI hook
+    aiUser: undefined, // Will be set after AI hook
+  });
+
+  // AI Player hook - needs game actions state
   const { aiUser, registerAI, clearAI, aiName, isAIGame, restoreAIForGame } = useAIPlayer({
     game,
     currentUserId: user?.id || '',
@@ -43,8 +56,47 @@ export default function GamePage() {
     onGameUpdate: setGame,
     onLastRollUpdate: setLastRoll,
     onDoubleSixUpdate: setIsDoubleSix,
-    onRollingUpdate: setIsRolling,
+    onRollingUpdate: () => {}, // Not used, managed in game actions hook
   });
+
+  // Re-create game actions with AI functions now available
+  const gameActionsWithAI = useGameActions({
+    game,
+    onGameUpdate: setGame,
+    isAIGame,
+    restoreAIForGame,
+    aiUser,
+  });
+
+  // Use the game actions with AI support
+  const finalHandleNewGame = gameActionsWithAI.handleNewGame;
+  const finalHandleEndGame = gameActionsWithAI.handleEndGame;
+
+  // Game Management hook
+  const {
+    viewMode,
+    setViewMode,
+    availableGames,
+    isLoading,
+    error: managementError,
+    setError: setManagementError,
+    loadAvailableGames,
+    loadGame,
+    createGame,
+    handleDeleteGame,
+    handleBackToMenu,
+  } = useGameManagement({
+    onGameCreated: setGame,
+    registerAI,
+    clearAI,
+  });
+
+  // Combined error state
+  const error = actionsError || managementError;
+  const setError = (msg: string) => {
+    setActionsError(msg);
+    setManagementError(msg);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -57,173 +109,6 @@ export default function GamePage() {
     setSoundEnabled(soundManager.isEnabled());
   }, []);
 
-  const loadAvailableGames = async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-      const games = await apiClient.getMyGames();
-      setAvailableGames(games);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load games');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadGame = async (gameId: string) => {
-    try {
-      setIsLoading(true);
-      setError('');
-      const fullGame = await apiClient.getGame(gameId);
-      setGame(fullGame);
-      setViewMode('game');
-    } catch (err: any) {
-      setError(err.message || 'Failed to load game');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const createGame = async (player1Username: string, player2Username: string, winningScore = 100, isAI: boolean = false) => {
-    try {
-      setIsLoading(true);
-      setError('');
-      
-      let actualPlayer2Username = player2Username;
-      
-      // If AI opponent, register a new user
-      if (isAI) {
-        try {
-          const aiUserData = await registerAI();
-          actualPlayer2Username = aiUserData.name;
-        } catch (err: any) {
-          setError(err.message || 'Failed to create AI opponent');
-          setIsLoading(false);
-          return;
-        }
-      } else {
-        clearAI();
-      }
-      
-      const newGame = await apiClient.createGame({
-        player1Username,
-        player2Username: actualPlayer2Username,
-        winningScore,
-      });
-      setGame(newGame);
-      setViewMode('game');
-    } catch (err: any) {
-      setError(err.message || 'Failed to create game');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRoll = useCallback(async () => {
-    if (!game || isRolling) return;
-
-    try {
-      setIsRolling(true);
-      setError('');
-      soundManager.playRoll();
-      const response = await apiClient.rollDice(game.id);
-      setGame(response.gameState);
-      setLastRoll(response.dice);
-      setIsDoubleSix(response.isDoubleSix);
-
-      if (response.isDoubleSix) {
-        soundManager.playDoubleSix();
-        // Double six: round score should be 0, turn should switch, game should continue
-        // Verify the backend handled it correctly
-        const currentPlayer = response.gameState.currentPlayerId === response.gameState.player1.id 
-          ? response.gameState.player1 
-          : response.gameState.player2;
-        const previousPlayer = response.gameState.currentPlayerId === response.gameState.player1.id 
-          ? response.gameState.player2 
-          : response.gameState.player1;
-        const previousRoundScore = previousPlayer.id === response.gameState.player1.id 
-          ? response.gameState.player1RoundScore 
-          : response.gameState.player2RoundScore;
-        
-        // The previous player's round score should be 0 after double six
-        if (previousRoundScore !== 0) {
-          console.warn('Double six occurred but round score was not reset to 0');
-        }
-        
-        // The game should still be active
-        if (response.gameState.status !== 'active') {
-          console.warn('Double six occurred but game status is not active:', response.gameState.status);
-        }
-        
-        // Clear the last roll after a delay so the message is visible
-        setTimeout(() => {
-          setLastRoll(null);
-          setIsDoubleSix(false);
-        }, 3000);
-      }
-
-      // Track win if game is over (but double six should NOT end the game)
-      if (response.gameState.status === 'finished' && response.gameState.winnerId) {
-        const winner = response.gameState.winnerId === response.gameState.player1.id
-          ? response.gameState.player1
-          : response.gameState.player2;
-        storage.incrementWin(winner.userId);
-        soundManager.playWin();
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to roll dice');
-    } finally {
-      setIsRolling(false);
-    }
-  }, [game, isRolling]);
-
-  const handleHold = useCallback(async () => {
-    if (!game) return;
-
-    try {
-      setError('');
-      soundManager.playHold();
-      const response = await apiClient.hold(game.id);
-      setGame(response.gameState);
-      setLastRoll(null);
-      setIsDoubleSix(false);
-
-      // Track win if game is over
-      if (response.isGameOver && response.winnerId) {
-        storage.incrementWin(response.winnerId);
-        soundManager.playWin();
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to hold');
-    }
-  }, [game]);
-
-
-  const handleNewGame = async () => {
-    if (!game) return;
-
-    try {
-      setError('');
-      const wasAIGame = isAIGame(game);
-      const newGameState = await apiClient.newGame(game.id);
-      setGame(newGameState);
-      setLastRoll(null);
-      setIsDoubleSix(false);
-      
-      // If the original game had an AI opponent, restore AI for the new game
-      if (wasAIGame) {
-        // Check if the new game still has the same AI player
-        const newGameHasAI = isAIGame(newGameState);
-        if (newGameHasAI && !aiUser) {
-          // AI user might not match new game's player IDs, restore it
-          await restoreAIForGame(newGameState);
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to start new game');
-    }
-  };
-
   const handleAbandonGameClick = async () => {
     setAbandonDialogOpen(true);
   };
@@ -235,17 +120,16 @@ export default function GamePage() {
 
     try {
       setError('');
+      const { apiClient } = await import('@/lib/api');
       await apiClient.deleteGame(game.id);
       setGame(null);
-      setLastRoll(null);
-      setIsDoubleSix(false);
+      clearGameState();
       clearAI();
-      setViewMode('menu');
-    } catch (err: any) {
-      // If delete fails, just clear the game locally (might not exist on backend)
+      handleBackToMenu();
+    } catch (err: any) {      
       setGame(null);
-      setError('');
-      setViewMode('menu');
+      clearGameState();
+      handleBackToMenu();
     }
   };
 
@@ -253,93 +137,11 @@ export default function GamePage() {
     setAbandonDialogOpen(false);
   };
 
-  const handleEndGame = async () => {
-    if (!game) return;
-
-    try {
-      setError('');
-      // Try to call API endpoint, if it doesn't exist, handle client-side
-      try {
-        const updatedGame = await apiClient.endGame(game.id);
-        setGame(updatedGame);
-      } catch (apiError: any) {
-        // If API endpoint doesn't exist, determine winner client-side
-        console.log('API endpoint not available, determining winner client-side');
-        const winnerId = game.player1Score > game.player2Score 
-          ? game.player1.id 
-          : game.player2Score > game.player1Score 
-          ? game.player2.id 
-          : undefined; // Tie
-        
-        const winner = winnerId 
-          ? (winnerId === game.player1.id ? game.player1 : game.player2)
-          : null;
-        
-        if (winner) {
-          storage.incrementWin(winner.userId);
-          soundManager.playWin();
-        } else {
-          // It's a tie - no winner
-          console.log('Game ended in a tie');
-        }
-        
-        // Update game state to finished
-        setGame({
-          ...game,
-          status: 'finished',
-          winnerId: winnerId, // undefined for ties
-        });
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to end game');
-    }
-  };
-
-  const handleBackToMenu = () => {
+  const handleBackToMenuWithCleanup = () => {
     setGame(null);
-    setLastRoll(null);
-    setIsDoubleSix(false);
+    clearGameState();
     clearAI();
-    setViewMode('menu');
-    setError('');
-  };
-
-  const handleDeleteGame = async (gameId: string) => {
-    if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
-      return;
-    }
-
-    if (!user) {
-      setError('You must be logged in to delete games. Please log in first.');
-      return;
-    }
-
-    try {
-      setError('');
-      setIsLoading(true);
-      console.log('Deleting game with ID:', gameId);
-      console.log('Current user:', user?.username);
-      console.log('Token in localStorage:', !!localStorage.getItem('token'));
-      
-      await apiClient.deleteGame(gameId);
-      console.log('Game deleted successfully');
-      // Remove the game from the list
-      setAvailableGames(prevGames => {
-        const filtered = prevGames.filter(g => g.id !== gameId);
-        console.log('Updated games list, removed game:', gameId, 'Remaining:', filtered.length);
-        return filtered;
-      });
-    } catch (err: any) {
-      console.error('Error deleting game:', err);
-      console.error('Error details:', {
-        message: err.message,
-        stack: err.stack,
-        gameId: gameId,
-      });
-      setError(err.message || 'Failed to delete game');
-    } finally {
-      setIsLoading(false);
-    }
+    handleBackToMenu();
   };
 
   if (authLoading) {
@@ -450,7 +252,7 @@ export default function GamePage() {
               <Typography variant="h4" component="h2" sx={{ fontWeight: 'bold' }}>
                 Create New Game
               </Typography>
-              <Button onClick={handleBackToMenu} color="inherit">
+              <Button onClick={handleBackToMenuWithCleanup} color="inherit">
                 Back to Menu
               </Button>
             </Box>
@@ -633,9 +435,9 @@ export default function GamePage() {
         currentUserId={user.id}
         onRoll={handleRoll}
         onHold={handleHold}
-        onNewGame={handleNewGame}
+        onNewGame={finalHandleNewGame}
         onAbandonGame={handleAbandonGameClick}
-        onEndGame={handleEndGame}
+        onEndGame={finalHandleEndGame}
         isRolling={isRolling}
         lastRoll={lastRoll}
         isDoubleSix={isDoubleSix}
@@ -670,94 +472,4 @@ export default function GamePage() {
   );
 }
 
-function CreateGameForm({
-  onCreateGame,
-  currentUsername,
-}: {
-  onCreateGame: (p1: string, p2: string, score: number, isAI: boolean) => void;
-  currentUsername: string;
-}) {
-  const [player1, setPlayer1] = useState(currentUsername);
-  const [player2, setPlayer2] = useState('');
-  const [winningScore, setWinningScore] = useState(100);
-  const [opponentType, setOpponentType] = useState<'human' | 'ai'>('human');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const isAI = opponentType === 'ai';
-    const player2Username = isAI ? 'AI' : player2;
-    if (player1 && player2Username) {
-      onCreateGame(player1, player2Username, winningScore, isAI);
-    }
-  };
-
-  return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <TextField
-        label="Player 1 (You)"
-        value={player1}
-        onChange={(e) => setPlayer1(e.target.value)}
-        required
-        fullWidth
-      />
-      
-      <FormControl component="fieldset">
-        <FormLabel component="legend">Opponent</FormLabel>
-        <RadioGroup
-          row
-          value={opponentType}
-          onChange={(e) => setOpponentType(e.target.value as 'human' | 'ai')}
-          sx={{ mb: 1 }}
-        >
-          <FormControlLabel value="human" control={<Radio />} label="Human Player" />
-          <FormControlLabel 
-            value="ai" 
-            control={<Radio />} 
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <SmartToyIcon fontSize="small" /> AI Opponent
-              </Box>
-            } 
-          />
-        </RadioGroup>
-        {opponentType === 'human' && (
-          <TextField
-            label="Player 2 Username"
-            value={player2}
-            onChange={(e) => setPlayer2(e.target.value)}
-            placeholder="Enter player 2 username (can be any username)"
-            required
-            fullWidth
-          />
-        )}
-        {opponentType === 'ai' && (
-          <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-            You'll be playing against an AI opponent
-          </Alert>
-        )}
-      </FormControl>
-      
-      <TextField
-        label="Winning Score"
-        type="number"
-        value={winningScore}
-        onChange={(e) => setWinningScore(parseInt(e.target.value) || 100)}
-        inputProps={{ min: 1 }}
-        required
-        fullWidth
-      />
-      <Button
-        type="submit"
-        variant="contained"
-        fullWidth
-        sx={{ py: 1.5, fontWeight: 'semibold' }}
-      >
-        Create Game
-      </Button>
-      <Typography variant="caption" sx={{ textAlign: 'center', color: 'text.secondary' }}>
-        Tip: You can enter any username for Player 2, or play against AI
-      </Typography>
-    </Box>
-  );
-}
 
