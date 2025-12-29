@@ -12,6 +12,7 @@ interface GameViewProps {
   onBackToMenu: () => void;
   game: GameState;
   currentUserId: string;
+  player2UserId?: string | null;
   onRoll: () => Promise<void>;
   onHold: () => Promise<void>;
   onNewGame: () => Promise<void>;
@@ -33,6 +34,7 @@ export default function GameView({
   onBackToMenu,
   game,
   currentUserId,
+  player2UserId,
   onRoll,
   onHold,
   onNewGame,
@@ -71,6 +73,7 @@ export default function GameView({
       <GameBoard
         game={game}
         currentUserId={currentUserId}
+        player2UserId={player2UserId}
         onRoll={onRoll}
         onHold={onHold}
         onNewGame={onNewGame}

@@ -3,6 +3,8 @@
 const WINS_KEY = 'dice_game_wins';
 const USER_PREF_KEY = 'dice_game_preferences';
 const AI_CREDENTIALS_KEY = 'dice_game_ai_credentials';
+const PLAYER2_TOKEN_KEY = 'dice_game_player2_token';
+const PLAYER2_USER_KEY = 'dice_game_player2_user';
 
 export interface WinsRecord {
   [userId: string]: number;
@@ -64,6 +66,29 @@ export const storage = {
   clearAICredentials(): void {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(AI_CREDENTIALS_KEY);
+  },
+
+  // Player 2 credentials storage (for two human players on same machine)
+  savePlayer2Auth(token: string, user: { id: string; username: string }): void {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(PLAYER2_TOKEN_KEY, token);
+    localStorage.setItem(PLAYER2_USER_KEY, JSON.stringify(user));
+  },
+
+  getPlayer2Auth(): { token: string; user: { id: string; username: string } } | null {
+    if (typeof window === 'undefined') return null;
+    const token = localStorage.getItem(PLAYER2_TOKEN_KEY);
+    const userStr = localStorage.getItem(PLAYER2_USER_KEY);
+    if (token && userStr) {
+      return { token, user: JSON.parse(userStr) };
+    }
+    return null;
+  },
+
+  clearPlayer2Auth(): void {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(PLAYER2_TOKEN_KEY);
+    localStorage.removeItem(PLAYER2_USER_KEY);
   },
 };
 

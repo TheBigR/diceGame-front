@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { Player2AuthProvider } from "@/contexts/Player2AuthContext";
 import { MUIThemeProvider } from "@/components/MUIThemeProvider";
 
 const geistSans = Geist({
@@ -33,7 +34,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <MUIThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <Player2AuthProvider>
+              {children}
+            </Player2AuthProvider>
+          </AuthProvider>
         </MUIThemeProvider>
       </body>
     </html>

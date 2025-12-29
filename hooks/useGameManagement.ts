@@ -8,12 +8,14 @@ interface UseGameManagementProps {
   onGameCreated: (game: GameState) => void;
   registerAI?: () => Promise<any>;
   clearAI?: () => void;
+  player2Token?: string | null;
 }
 
 export function useGameManagement({
   onGameCreated,
   registerAI,
   clearAI,
+  player2Token,
 }: UseGameManagementProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('menu');
   const [availableGames, setAvailableGames] = useState<GameState[]>([]);
@@ -73,11 +75,12 @@ export function useGameManagement({
         clearAI?.();
       }
       
+      // Use player2Token if creating a game with a human player2
       const newGame = await apiClient.createGame({
         player1Username,
         player2Username: actualPlayer2Username,
         winningScore,
-      });
+      }, !isAI && player2Token ? player2Token : undefined);
       onGameCreated(newGame);
       setViewMode('game');
     } catch (err: any) {
@@ -85,13 +88,9 @@ export function useGameManagement({
     } finally {
       setIsLoading(false);
     }
-  }, [onGameCreated, registerAI, clearAI]);
+  }, [onGameCreated, registerAI, clearAI, player2Token]);
 
   const handleDeleteGame = useCallback(async (gameId: string) => {
-    if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
-      return;
-    }
-
     try {
       setError('');
       setIsLoading(true);

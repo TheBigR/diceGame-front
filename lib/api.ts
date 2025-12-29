@@ -96,16 +96,18 @@ class ApiClient {
     });
   }
 
-  async getMe(): Promise<User> {
-    return this.request<User>('/api/auth/me');
+  async getMe(customToken?: string | null): Promise<User> {
+    return this.request<User>('/api/auth/me', {}, customToken);
   }
 
   // Game endpoints
-  async createGame(data: CreateGameRequest): Promise<GameState> {
+  async createGame(data: CreateGameRequest, player2Token?: string | null): Promise<GameState> {
+    // If player2Token is provided, use it for the request (player2 is creating the game)
+    // Otherwise, use the default token (player1 is creating the game)
     return this.request<GameState>('/api/games', {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    }, player2Token);
   }
 
   async getGame(gameId: string): Promise<GameState> {
@@ -128,11 +130,11 @@ class ApiClient {
     }, token);
   }
 
-  async newGame(gameId: string, winningScore?: number): Promise<GameState> {
+  async newGame(gameId: string, winningScore?: number, token?: string | null): Promise<GameState> {
     return this.request<GameState>(`/api/games/${gameId}/new-game`, {
       method: 'POST',
       body: JSON.stringify({ winningScore }),
-    });
+    }, token);
   }
 
   async deleteGame(gameId: string): Promise<void> {

@@ -38,7 +38,7 @@ export default function CreateGameView({
           <Typography variant="h4" component="h2" sx={{ fontWeight: 'bold', mb: 3 }}>
             Create New Game
           </Typography>
-          <CreateGameForm onCreateGame={onCreateGame} currentUsername={username} />
+          <CreateGameForm onCreateGame={onCreateGame} currentUsername={username} onSwitchAccount={onLogout} />
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
               {error}

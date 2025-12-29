@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { usePlayer2Auth } from '@/contexts/Player2AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { GameState } from '@/types';
@@ -15,6 +16,7 @@ import GameView from '@/components/views/GameView';
 
 export default function GamePage() {
   const { user, logout, isLoading: authLoading } = useAuth();
+  const { user: player2User, token: player2Token } = usePlayer2Auth();
   const router = useRouter();
   const [game, setGame] = useState<GameState | null>(null);
   const [abandonDialogOpen, setAbandonDialogOpen] = useState(false);
@@ -39,6 +41,8 @@ export default function GamePage() {
     isAIGame: undefined, // Will be set after AI hook
     restoreAIForGame: undefined, // Will be set after AI hook
     aiUser: undefined, // Will be set after AI hook
+    currentUserId: user?.id || '',
+    player2Token: player2Token,
   });
 
   // AI Player hook - needs game actions state
@@ -60,6 +64,8 @@ export default function GamePage() {
     isAIGame,
     restoreAIForGame,
     aiUser,
+    currentUserId: user?.id || '',
+    player2Token: player2Token,
   });
 
   // Use the game actions with AI support
@@ -83,6 +89,7 @@ export default function GamePage() {
     onGameCreated: setGame,
     registerAI,
     clearAI,
+    player2Token: player2Token,
   });
 
   // Combined error state
@@ -207,6 +214,7 @@ export default function GamePage() {
       onBackToMenu={handleBackToMenu}
       game={game}
       currentUserId={user.id}
+      player2UserId={player2User?.id}
       onRoll={handleRoll}
       onHold={handleHold}
       onNewGame={finalHandleNewGame}

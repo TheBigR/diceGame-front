@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { Box, Button, Typography, Alert, Paper, CircularProgress, Tooltip, IconButton } from '@mui/material';
 import { GameState } from '@/types';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import NavBar from '@/components/NavBar';
+import AbandonGameDialog from '@/components/AbandonGameDialog';
 
 interface GamesListViewProps {
   username: string;
@@ -29,6 +31,27 @@ export default function GamesListView({
   isLoading,
   error,
 }: GamesListViewProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [gameToDelete, setGameToDelete] = useState<string | null>(null);
+
+  const handleDeleteClick = (gameId: string) => {
+    setGameToDelete(gameId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (gameToDelete) {
+      onDeleteGame(gameToDelete);
+      setGameToDelete(null);
+    }
+    setDeleteDialogOpen(false);
+  };
+
+  const handleDeleteCancel = () => {
+    setGameToDelete(null);
+    setDeleteDialogOpen(false);
+  };
+
   return (
     <Box
       sx={{
@@ -94,7 +117,7 @@ export default function GamesListView({
                     <Tooltip title="Delete game">
                       <IconButton
                         color="error"
-                        onClick={() => onDeleteGame(g.id)}
+                        onClick={() => handleDeleteClick(g.id)}
                         disabled={isLoading}
                       >
                         <DeleteIcon />
@@ -113,6 +136,16 @@ export default function GamesListView({
           </Alert>
         )}
       </Box>
+
+      <AbandonGameDialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Game?"
+        message="Are you sure you want to delete this game? This action cannot be undone."
+        confirmText="Delete Game"
+        cancelText="Cancel"
+      />
     </Box>
   );
 }

@@ -10,6 +10,8 @@ interface UseGameActionsProps {
   isAIGame?: (game: GameState | null) => boolean;
   restoreAIForGame?: (game: GameState | null) => Promise<void>;
   aiUser?: any;
+  currentUserId?: string;
+  player2Token?: string | null;
 }
 
 export function useGameActions({
@@ -18,6 +20,8 @@ export function useGameActions({
   isAIGame,
   restoreAIForGame,
   aiUser,
+  currentUserId,
+  player2Token,
 }: UseGameActionsProps) {
   const [isRolling, setIsRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState<DiceRoll | null>(null);
@@ -31,7 +35,13 @@ export function useGameActions({
       setIsRolling(true);
       setError('');
       soundManager.playRoll();
-      const response = await apiClient.rollDice(game.id);
+      
+      // Determine which token to use based on current player
+      const currentPlayer = game.currentPlayerId === game.player1.id ? game.player1 : game.player2;
+      const isPlayer2Turn = currentPlayer.userId !== currentUserId;
+      const tokenToUse = isPlayer2Turn && player2Token ? player2Token : undefined;
+      
+      const response = await apiClient.rollDice(game.id, tokenToUse);
       onGameUpdate(response.gameState);
       setLastRoll(response.dice);
       setIsDoubleSix(response.isDoubleSix);
@@ -80,7 +90,7 @@ export function useGameActions({
     } finally {
       setIsRolling(false);
     }
-  }, [game, isRolling, onGameUpdate]);
+  }, [game, isRolling, onGameUpdate, currentUserId, player2Token]);
 
   const handleHold = useCallback(async () => {
     if (!game) return;
@@ -88,7 +98,13 @@ export function useGameActions({
     try {
       setError('');
       soundManager.playHold();
-      const response = await apiClient.hold(game.id);
+      
+      // Determine which token to use based on current player
+      const currentPlayer = game.currentPlayerId === game.player1.id ? game.player1 : game.player2;
+      const isPlayer2Turn = currentPlayer.userId !== currentUserId;
+      const tokenToUse = isPlayer2Turn && player2Token ? player2Token : undefined;
+      
+      const response = await apiClient.hold(game.id, tokenToUse);
       onGameUpdate(response.gameState);
       setLastRoll(null);
       setIsDoubleSix(false);
@@ -101,7 +117,7 @@ export function useGameActions({
     } catch (err: any) {
       setError(err.message || 'Failed to hold');
     }
-  }, [game, onGameUpdate]);
+  }, [game, onGameUpdate, currentUserId, player2Token]);
 
   const handleNewGame = useCallback(async () => {
     if (!game) return;
@@ -146,7 +162,11 @@ export function useGameActions({
       // If there's a round score, hold first to add it to the total
       if (currentRoundScore > 0) {
         try {
-          const holdResponse = await apiClient.hold(game.id);
+          // Determine which token to use based on current player
+          const isPlayer2Turn = currentPlayer.userId !== currentUserId;
+          const tokenToUse = isPlayer2Turn && player2Token ? player2Token : undefined;
+          
+          const holdResponse = await apiClient.hold(game.id, tokenToUse);
           finalGameState = holdResponse.gameState;
           onGameUpdate(finalGameState);
           
@@ -163,6 +183,7 @@ export function useGameActions({
       }
       
       // Now end the game and determine winner
+      // Use player1's token (the main user) to end the game
       try {
         const updatedGame = await apiClient.endGame(finalGameState.id);
         onGameUpdate(updatedGame);
@@ -197,7 +218,7 @@ export function useGameActions({
     } catch (err: any) {
       setError(err.message || 'Failed to end game');
     }
-  }, [game, onGameUpdate]);
+  }, [game, onGameUpdate, currentUserId, player2Token]);
 
   const clearGameState = useCallback(() => {
     setLastRoll(null);

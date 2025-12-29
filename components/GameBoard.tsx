@@ -16,6 +16,7 @@ import FlagIcon from '@mui/icons-material/Flag';
 interface GameBoardProps {
   game: GameState;
   currentUserId: string;
+  player2UserId?: string | null;
   onRoll: () => Promise<void>;
   onHold: () => Promise<void>;
   onNewGame: () => Promise<void>;
@@ -30,6 +31,7 @@ interface GameBoardProps {
 const GameBoard: React.FC<GameBoardProps> = ({
   game,
   currentUserId,
+  player2UserId,
   onRoll,
   onHold,
   onNewGame,
@@ -44,7 +46,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const [diceRolling, setDiceRolling] = useState(false);
 
   const currentPlayer = game.currentPlayerId === game.player1.id ? game.player1 : game.player2;
-  const isMyTurn = currentPlayer.userId === currentUserId;
+  // Check if it's either Player 1's or Player 2's turn (for two human players on same machine)
+  const isMyTurn = currentPlayer.userId === currentUserId || (player2UserId && currentPlayer.userId === player2UserId);
   const isPlayer1 = game.player1.userId === currentUserId;
   const myScore = isPlayer1 ? game.player1Score : game.player2Score;
   const myRoundScore = isPlayer1 ? game.player1RoundScore : game.player2RoundScore;
