@@ -246,7 +246,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
           Winning Score: <strong>{game.winningScore}</strong>
         </Typography>
         <Typography variant="body2" component="div" sx={{ color: 'text.secondary', mt: 0.5 }}>
-          {isMyTurn ? "It's your turn!" : aiName && currentPlayer.username === aiName ? (
+          {game.status === 'finished' ? (
+            'Game ended'
+          ) : isMyTurn ? (
+            "It's your turn!"
+          ) : aiName && currentPlayer.username === aiName ? (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
               <CircularProgress size={16} />
               <SmartToyIcon fontSize="small" />
