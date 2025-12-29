@@ -12,11 +12,11 @@ interface GameViewProps {
   onBackToMenu: () => void;
   game: GameState;
   currentUserId: string;
-  onRoll: () => void;
-  onHold: () => void;
-  onNewGame: () => void;
-  onAbandonGame: () => void;
-  onEndGame: () => void;
+  onRoll: () => Promise<void>;
+  onHold: () => Promise<void>;
+  onNewGame: () => Promise<void>;
+  onAbandonGame: () => Promise<void>;
+  onEndGame: () => Promise<void>;
   isRolling: boolean;
   lastRoll: DiceRoll | null;
   isDoubleSix: boolean;

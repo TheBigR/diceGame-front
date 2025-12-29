@@ -37,7 +37,7 @@ export default function GamesListView({
         p: 4,
       }}
     >
-      <Box sx={{ maxWidth: '48rem', mx: 'auto' }}>
+      <Box sx={{ maxWidth: '56rem', mx: 'auto' }}>
         <NavBar
           username={username}
           onLogout={onLogout}

@@ -1,11 +1,11 @@
 'use client';
 
-import { Box, Button, Typography, IconButton, Tooltip, Paper, Divider } from '@mui/material';
+import { Box, Typography, IconButton, Tooltip, Paper, Divider, Button } from '@mui/material';
 import CasinoIcon from '@mui/icons-material/Casino';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import LogoutIcon from '@mui/icons-material/Logout';
-import AddIcon from '@mui/icons-material/Add';
+import HomeIcon from '@mui/icons-material/Home';
 import { soundManager } from '@/lib/sounds';
 import { useState, useEffect } from 'react';
 
@@ -102,20 +102,22 @@ export default function NavBar({
       <Box sx={{ display: 'flex', gap: 1, flex: '0 0 auto', ml: 'auto', zIndex: 1 }}>
         {showMainMenuButton && onMainMenuClick && (
           <>
-            <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<AddIcon />}
-              onClick={onMainMenuClick}
-              title="Back to main menu"
-              sx={{ 
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600,
-              }}
-            >
-              Main Menu
-            </Button>
+            <Tooltip title="Back to main menu" arrow>
+              <IconButton
+                color="primary"
+                onClick={onMainMenuClick}
+                sx={{
+                  border: '1px solid',
+                  borderColor: 'primary.main',
+                  '&:hover': {
+                    bgcolor: 'primary.light',
+                    borderColor: 'primary.dark',
+                  },
+                }}
+              >
+                <HomeIcon />
+              </IconButton>
+            </Tooltip>
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
           </>
         )}

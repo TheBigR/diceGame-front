@@ -27,7 +27,7 @@ export default function CreateGameView({
         p: 4,
       }}
     >
-      <Box sx={{ maxWidth: '42rem', mx: 'auto' }}>
+      <Box sx={{ maxWidth: '56rem', mx: 'auto' }}>
         <NavBar
           username={username}
           onLogout={onLogout}
