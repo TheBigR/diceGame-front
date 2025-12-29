@@ -105,6 +105,23 @@ export default function GamePage() {
     }
   }, [user, authLoading, router]);
 
+  // Periodically refresh game state from backend to ensure we have the latest turn information
+  useEffect(() => {
+    if (!game || game.status !== 'active' || viewMode !== 'game') return;
+
+    const refreshInterval = setInterval(async () => {
+      try {
+        const { apiClient } = await import('@/lib/api');
+        const refreshedGame = await apiClient.getGameState(game.id);
+        setGame(refreshedGame);
+      } catch (err) {
+        console.warn('Failed to refresh game state:', err);
+      }
+    }, 2000); // Refresh every 2 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [game, viewMode]);
+
 
   const handleAbandonGameClick = async () => {
     setAbandonDialogOpen(true);

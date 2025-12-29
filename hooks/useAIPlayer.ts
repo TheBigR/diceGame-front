@@ -150,7 +150,14 @@ export function useAIPlayer({
               storage.incrementWin(response.winnerId);
               soundManager.playWin();
             }
-            // After holding, turn switches - reset flags
+            // After holding, turn switches - refresh game state from backend to ensure accuracy
+            try {
+              const refreshedState = await apiClient.getGameState(gameId);
+              onGameUpdate(refreshedState);
+            } catch (err) {
+              console.warn('Failed to refresh game state after AI hold:', err);
+            }
+            // Reset flags
             aiProcessingRef.current = false;
             lastProcessedGameStateRef.current = null;
           } else {
@@ -164,7 +171,14 @@ export function useAIPlayer({
             
             if (response.isDoubleSix) {
               soundManager.playDoubleSix();
-              // Double six - turn switches, reset flags
+              // Double six - turn switches, refresh game state from backend
+              try {
+                const refreshedState = await apiClient.getGameState(gameId);
+                onGameUpdate(refreshedState);
+              } catch (err) {
+                console.warn('Failed to refresh game state after double six:', err);
+              }
+              // Reset flags
               aiProcessingRef.current = false;
               lastProcessedGameStateRef.current = null;
             } else {

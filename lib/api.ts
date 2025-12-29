@@ -114,6 +114,11 @@ class ApiClient {
     return this.request<GameState>(`/api/games/${gameId}`);
   }
 
+  // Alias for getGame - returns current game state including whose turn it is
+  async getGameState(gameId: string): Promise<GameState> {
+    return this.getGame(gameId);
+  }
+
   async getMyGames(): Promise<GameState[]> {
     return this.request<GameState[]>('/api/games/my-games');
   }
@@ -143,10 +148,10 @@ class ApiClient {
     });
   }
 
-  async endGame(gameId: string): Promise<GameState> {
+  async endGame(gameId: string, token?: string): Promise<GameState> {
     return this.request<GameState>(`/api/games/${gameId}/end`, {
       method: 'POST',
-    });
+    }, token);
   }
 }
 

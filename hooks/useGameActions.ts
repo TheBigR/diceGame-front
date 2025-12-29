@@ -48,28 +48,6 @@ export function useGameActions({
 
       if (response.isDoubleSix) {
         soundManager.playDoubleSix();
-        // Double six: round score should be 0, turn should switch, game should continue
-        // Verify the backend handled it correctly
-        const currentPlayer = response.gameState.currentPlayerId === response.gameState.player1.id 
-          ? response.gameState.player1 
-          : response.gameState.player2;
-        const previousPlayer = response.gameState.currentPlayerId === response.gameState.player1.id 
-          ? response.gameState.player2 
-          : response.gameState.player1;
-        const previousRoundScore = previousPlayer.id === response.gameState.player1.id 
-          ? response.gameState.player1RoundScore 
-          : response.gameState.player2RoundScore;
-        
-        // The previous player's round score should be 0 after double six
-        if (previousRoundScore !== 0) {
-          console.warn('Double six occurred but round score was not reset to 0');
-        }
-        
-        // The game should still be active
-        if (response.gameState.status !== 'active') {
-          console.warn('Double six occurred but game status is not active:', response.gameState.status);
-        }
-        
         // Clear the last roll after a delay so the message is visible
         setTimeout(() => {
           setLastRoll(null);
@@ -182,38 +160,24 @@ export function useGameActions({
         }
       }
       
-      // Now end the game and determine winner
-      // Use player1's token (the main user) to end the game
-      try {
-        const updatedGame = await apiClient.endGame(finalGameState.id);
-        onGameUpdate(updatedGame);
-      } catch (apiError: any) {
-        // If API endpoint doesn't exist, determine winner client-side
-        console.log('API endpoint not available, determining winner client-side');
-        const winnerId = finalGameState.player1Score > finalGameState.player2Score 
-          ? finalGameState.player1.id 
-          : finalGameState.player2Score > finalGameState.player1Score 
-          ? finalGameState.player2.id 
-          : undefined; // Tie
-        
-        const winner = winnerId 
-          ? (winnerId === finalGameState.player1.id ? finalGameState.player1 : finalGameState.player2)
-          : null;
-        
-        if (winner) {
-          storage.incrementWin(winner.userId);
-          soundManager.playWin();
-        } else {
-          // It's a tie - no winner
-          console.log('Game ended in a tie');
-        }
-        
-        // Update game state to finished
-        onGameUpdate({
-          ...finalGameState,
-          status: 'finished',
-          winnerId: winnerId, // undefined for ties
-        });
+      // Now end the game - backend will determine the winner
+      // Recalculate token based on final game state (turn may have changed after hold)
+      const finalCurrentPlayer = finalGameState.currentPlayerId === finalGameState.player1.id 
+        ? finalGameState.player1 
+        : finalGameState.player2;
+      const isPlayer2Turn = finalCurrentPlayer.userId !== currentUserId;
+      const finalTokenToUse = isPlayer2Turn && player2Token ? player2Token : undefined;
+      
+      const updatedGame = await apiClient.endGame(finalGameState.id, finalTokenToUse);
+      onGameUpdate(updatedGame);
+      
+      // Track win if backend determined a winner
+      if (updatedGame.status === 'finished' && updatedGame.winnerId) {
+        const winner = updatedGame.winnerId === updatedGame.player1.id 
+          ? updatedGame.player1 
+          : updatedGame.player2;
+        storage.incrementWin(winner.userId);
+        soundManager.playWin();
       }
     } catch (err: any) {
       setError(err.message || 'Failed to end game');
