@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Dice Game",
   description: "A fun two-player dice game",
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
