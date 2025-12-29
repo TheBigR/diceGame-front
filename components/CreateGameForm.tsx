@@ -86,7 +86,7 @@ export default function CreateGameForm({
         type="submit"
         variant="contained"
         fullWidth
-        sx={{ py: 1.5, fontWeight: 'semibold' }}
+        sx={{ py: 1.5, fontWeight: 'semibold', textTransform: 'none' }}
       >
         Create Game
       </Button>

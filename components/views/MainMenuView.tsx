@@ -47,7 +47,7 @@ export default function MainMenuView({
               size="large"
               startIcon={<AddIcon />}
               onClick={onCreateGame}
-              sx={{ py: 1.5 }}
+              sx={{ py: 1.5, textTransform: 'none' }}
             >
               Create New Game
             </Button>
@@ -57,7 +57,7 @@ export default function MainMenuView({
               size="large"
               startIcon={<CasinoIcon />}
               onClick={onContinueGame}
-              sx={{ py: 1.5 }}
+              sx={{ py: 1.5, textTransform: 'none' }}
             >
               Continue Existing Game
             </Button>

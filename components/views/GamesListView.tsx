@@ -61,6 +61,7 @@ export default function GamesListView({
               variant="contained"
               startIcon={<AddIcon />}
               onClick={onCreateGame}
+              sx={{ textTransform: 'none' }}
             >
               Create New Game
             </Button>
@@ -86,6 +87,7 @@ export default function GamesListView({
                       variant="contained"
                       onClick={() => onLoadGame(g.id)}
                       disabled={isLoading}
+                      sx={{ textTransform: 'none' }}
                     >
                       Continue
                     </Button>

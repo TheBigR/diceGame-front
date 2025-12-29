@@ -48,10 +48,10 @@ export default function AbandonGameDialog({
         </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} color="inherit">
+        <Button onClick={onClose} color="inherit" sx={{ textTransform: 'none' }}>
           {cancelText}
         </Button>
-        <Button onClick={handleConfirm} color="error" variant="contained" autoFocus>
+        <Button onClick={handleConfirm} color="error" variant="contained" autoFocus sx={{ textTransform: 'none' }}>
           {confirmText}
         </Button>
       </DialogActions>

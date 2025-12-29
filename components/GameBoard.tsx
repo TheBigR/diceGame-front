@@ -262,22 +262,22 @@ const GameBoard: React.FC<GameBoardProps> = ({
             <Button
               variant="contained"
               color="success"
-              size="large"
+              size="medium"
               startIcon={isRolling ? <CircularProgress size={20} color="inherit" /> : <CasinoIcon />}
               onClick={onRoll}
               disabled={isRolling || showDoubleSixMessage}
-              sx={{ minWidth: '140px' }}
+              sx={{ minWidth: '140px', textTransform: 'none' }}
             >
               {isRolling ? 'Rolling...' : 'Roll Dice'}
             </Button>
             <Button
               variant="contained"
               color="warning"
-              size="large"
+              size="medium"
               startIcon={<SaveIcon />}
               onClick={onHold}
               disabled={isRolling || showDoubleSixMessage}
-              sx={{ minWidth: '140px' }}
+              sx={{ minWidth: '140px', textTransform: 'none' }}
             >
               End Turn
             </Button>
@@ -286,10 +286,10 @@ const GameBoard: React.FC<GameBoardProps> = ({
         <Button
           variant="contained"
           color="inherit"
-          size="large"
+          size="medium"
           startIcon={<RefreshIcon />}
           onClick={onNewGame}
-          sx={{ minWidth: '140px' }}
+          sx={{ minWidth: '140px', textTransform: 'none' }}
         >
           New Game
         </Button>
@@ -298,20 +298,20 @@ const GameBoard: React.FC<GameBoardProps> = ({
             <Button
               variant="contained"
               color="success"
-              size="large"
+              size="medium"
               startIcon={<FlagIcon />}
               onClick={onEndGame}
-              sx={{ minWidth: '140px' }}
+              sx={{ minWidth: '140px', textTransform: 'none' }}
             >
               End Game
             </Button>
             <Button
               variant="contained"
               color="error"
-              size="large"
+              size="medium"
               startIcon={<DeleteIcon />}
               onClick={onAbandonGame}
-              sx={{ minWidth: '140px' }}
+              sx={{ minWidth: '140px', textTransform: 'none' }}
             >
               Abandon Game
             </Button>
