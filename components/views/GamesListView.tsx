@@ -57,7 +57,7 @@ export default function GamesListView({
       sx={{
         minHeight: '100vh',
         background: 'linear-gradient(to bottom right, #eff6ff, #eef2ff)',
-        p: 4,
+        p: { xs: 2, sm: 4 },
       }}
     >
       <Box sx={{ maxWidth: '56rem', mx: 'auto' }}>

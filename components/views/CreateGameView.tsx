@@ -24,7 +24,7 @@ export default function CreateGameView({
       sx={{
         minHeight: '100vh',
         background: 'linear-gradient(to bottom right, #eff6ff, #eef2ff)',
-        p: 4,
+        p: { xs: 2, sm: 4 },
       }}
     >
       <Box sx={{ maxWidth: '56rem', mx: 'auto' }}>
@@ -34,7 +34,7 @@ export default function CreateGameView({
           showMainMenuButton={true}
           onMainMenuClick={onBackToMenu}
         />
-        <Paper elevation={3} sx={{ p: 4, mt: 2 }}>
+        <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 }, mt: 2 }}>
           <Typography variant="h4" component="h2" sx={{ fontWeight: 'bold', mb: 3 }}>
             Create New Game
           </Typography>

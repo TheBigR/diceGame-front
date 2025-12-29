@@ -25,7 +25,7 @@ export default function MainMenuView({
       sx={{
         minHeight: '100vh',
         background: 'linear-gradient(to bottom right, #eff6ff, #eef2ff)',
-        p: 4,
+        p: { xs: 2, sm: 4 },
       }}
     >
       <Box sx={{ maxWidth: '56rem', mx: 'auto' }}>
@@ -40,7 +40,7 @@ export default function MainMenuView({
           </Alert>
         )}
 
-        <Paper elevation={3} sx={{ p: 4, mt: 2 }}>
+        <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 }, mt: 2 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, }}>
             <Button
               variant="contained"

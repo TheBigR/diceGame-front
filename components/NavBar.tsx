@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Typography, IconButton, Tooltip, Paper, Divider, Button } from '@mui/material';
+import { Box, Typography, IconButton, Tooltip, Paper, Button, useMediaQuery, useTheme } from '@mui/material';
 import CasinoIcon from '@mui/icons-material/Casino';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
@@ -23,6 +23,8 @@ export default function NavBar({
   onMainMenuClick,
 }: NavBarProps) {
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     // Initialize sound state from soundManager
@@ -40,10 +42,13 @@ export default function NavBar({
       elevation={3}
       sx={{
         mb: 0.1,
-        px: 3,        
+        px: { xs: 1, sm: 3 },
+        py: { xs: 0.5, sm: 0 },
         display: 'flex',
+        flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: { xs: 0.5, sm: 0 },
         maxWidth: '56rem',
         mx: 'auto',
         position: 'relative',
@@ -55,76 +60,85 @@ export default function NavBar({
       }}
     >
  
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: '0 0 auto', zIndex: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1.5 }, flex: '1 1 auto', zIndex: 1, minWidth: 0 }}>
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 40,
-            height: 40,
+            width: { xs: 28, sm: 40 },
+            height: { xs: 28, sm: 40 },
             borderRadius: 1.5,
             bgcolor: 'primary.main',
             color: 'primary.contrastText',
             boxShadow: 2,
+            flexShrink: 0,
           }}
         >
-          <CasinoIcon />
+          <CasinoIcon sx={{ fontSize: { xs: '1.1rem', sm: '1.75rem' } }} />
         </Box>
-        <Box>
-        <Typography 
-          variant="h5" 
-          component="h1" 
-          sx={{ 
-            fontWeight: 700, 
-            color: 'text.primary',
-            letterSpacing: 0.5,
-          }}
-        >
-          Dice Game
-        </Typography>
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            color: 'text.secondary', 
-            whiteSpace: 'nowrap',
-            fontWeight: 500,
-          }}
-        >
-          Welcome, <strong>{username}</strong>!
-        </Typography>
+        <Box sx={{ minWidth: 0, flex: '1 1 auto' }}>
+          <Typography 
+            variant={isMobile ? "h6" : "h5"}
+            component="h1" 
+            sx={{ 
+              fontWeight: 700, 
+              color: 'text.primary',
+              letterSpacing: 0.5,
+              fontSize: { xs: '0.875rem', sm: '1.5rem' },
+              lineHeight: { xs: 1.2, sm: 1.5 },
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Dice Game
+          </Typography>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: 'text.secondary', 
+              whiteSpace: 'nowrap',
+              fontWeight: 500,
+              fontSize: { xs: '0.65rem', sm: '0.875rem' },
+              lineHeight: { xs: 1.2, sm: 1.5 },
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            Welcome, <strong>{username}</strong>!
+          </Typography>
         </Box>
       </Box>
 
 
 
-      {/* Right: Buttons */}
-      <Box sx={{ display: 'flex', gap: 1, flex: '0 0 auto', ml: 'auto', zIndex: 1 }}>
+            {/* Right: Buttons */}
+            <Box sx={{ display: 'flex', gap: { xs: 0.25, sm: 1 }, flex: '0 0 auto', zIndex: 1, alignItems: 'center', flexShrink: 0 }}>
         {showMainMenuButton && onMainMenuClick && (
-          <>
-            <Tooltip title="Back to main menu" arrow>
-              <IconButton
-                color="primary"
-                onClick={onMainMenuClick}
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'primary.main',
-                  '&:hover': {
-                    bgcolor: 'primary.light',
-                    borderColor: 'primary.dark',
-                  },
-                }}
-              >
-                <HomeIcon />
-              </IconButton>
-            </Tooltip>
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-          </>
+          <Tooltip title="Back to main menu" arrow>
+            <IconButton
+              color="primary"
+              onClick={onMainMenuClick}
+              size={isMobile ? 'small' : 'medium'}
+              sx={{
+                border: '1px solid',
+                borderColor: 'primary.main',
+                '&:hover': {
+                  bgcolor: 'primary.light',
+                  borderColor: 'primary.dark',
+                },
+              }}
+            >
+              <HomeIcon fontSize={isMobile ? 'small' : 'medium'} />
+            </IconButton>
+          </Tooltip>
         )}
         <Tooltip title={soundEnabled ? 'Disable sounds' : 'Enable sounds'} arrow>
           <IconButton
             color={soundEnabled ? 'primary' : 'default'}
             onClick={handleSoundToggle}
+            size={isMobile ? 'small' : 'medium'}
             sx={{
               border: '1px solid',
               borderColor: soundEnabled ? 'primary.main' : 'divider',
@@ -134,26 +148,46 @@ export default function NavBar({
               },
             }}
           >
-            {soundEnabled ? <VolumeUpIcon /> : <VolumeOffIcon />}
+            {soundEnabled ? <VolumeUpIcon fontSize={isMobile ? 'small' : 'medium'} /> : <VolumeOffIcon fontSize={isMobile ? 'small' : 'medium'} />}
           </IconButton>
         </Tooltip>
-        <Button
-          variant="contained"
-          color="error"
-          startIcon={<LogoutIcon />}
-          onClick={onLogout}
-          sx={{
-            borderRadius: 2,
-            textTransform: 'none',
-            fontWeight: 600,
-            boxShadow: 2,
-            '&:hover': {
-              boxShadow: 4,
-            },
-          }}
-        >
-          Logout
-        </Button>
+        {isMobile ? (
+          <Tooltip title="Logout" arrow>
+            <IconButton
+              color="error"
+              onClick={onLogout}
+              size="small"
+              sx={{
+                border: '1px solid',
+                borderColor: 'error.main',
+                '&:hover': {
+                  bgcolor: 'error.light',
+                  borderColor: 'error.dark',
+                },
+              }}
+            >
+              <LogoutIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<LogoutIcon />}
+            onClick={onLogout}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4,
+              },
+            }}
+          >
+            Logout
+          </Button>
+        )}
       </Box>
     </Paper>
   );

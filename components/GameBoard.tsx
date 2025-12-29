@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
 import { GameState, DiceRoll } from '@/types';
 import Dice from './Dice';
 import { storage } from '@/lib/storage';
-import { Box, Button, Typography, Paper, Alert, Chip, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
+import { Box, Button, Typography, Paper, Alert, Chip, CircularProgress, Dialog, DialogTitle, IconButton, useMediaQuery, useTheme, Slide } from '@mui/material';
+import { TransitionProps } from '@mui/material/transitions';
 import CasinoIcon from '@mui/icons-material/Casino';
 import SaveIcon from '@mui/icons-material/Save';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -44,6 +45,17 @@ const GameBoard: React.FC<GameBoardProps> = ({
 }) => {
   const [showDoubleSixMessage, setShowDoubleSixMessage] = useState(false);
   const [diceRolling, setDiceRolling] = useState(false);
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const Transition = forwardRef(function Transition(
+    props: TransitionProps & {
+      children: React.ReactElement;
+    },
+    ref: React.Ref<unknown>,
+  ) {
+    return <Slide direction="up" ref={ref} {...props} />;
+  });
 
   const currentPlayer = game.currentPlayerId === game.player1.id ? game.player1 : game.player2;
   // Check if it's either Player 1's or Player 2's turn (for two human players on same machine)
@@ -84,11 +96,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const player2Wins = storage.getWinCount(game.player2.userId);
 
   return (
-    <Box sx={{ maxWidth: '56rem', mx: 'auto', p: 3 }}>
+    <Box sx={{ maxWidth: '56rem', mx: 'auto', p: { xs: 2, sm: 3 } }}>
       {/* Double Six Modal */}
       <Dialog
         open={showDoubleSixMessage}
         onClose={() => setShowDoubleSixMessage(false)}
+        TransitionComponent={Transition}
         maxWidth="sm"
         fullWidth
         slotProps={{
@@ -97,6 +110,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
               position: 'relative',
               textAlign: 'center',
               p: 3,
+              ...(fullScreen && {
+                m: 2,
+                mb: 0,
+                maxHeight: '60vh',
+                borderRadius: 2,
+              }),
             },
           },
         }}

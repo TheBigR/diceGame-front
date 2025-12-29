@@ -1,15 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   IconButton,
   Box,
+  useMediaQuery,
+  useTheme,
+  Slide,
 } from '@mui/material';
+import { TransitionProps } from '@mui/material/transitions';
 import CloseIcon from '@mui/icons-material/Close';
 import Player2AuthForm from './Player2AuthForm';
+
+const Transition = forwardRef(function Transition(
+  props: TransitionProps & {
+    children: React.ReactElement;
+  },
+  ref: React.Ref<unknown>,
+) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 interface Player2AuthDialogProps {
   open: boolean;
@@ -41,16 +54,26 @@ export default function Player2AuthDialog({
     onClose();
   };
 
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
+      TransitionComponent={Transition}
       maxWidth="sm"
       fullWidth
       slotProps={{
         paper: {
           sx: {
             position: 'relative',
+            ...(fullScreen && {
+              m: 2,
+              mb: 0,
+              maxHeight: '60vh',
+              borderRadius: 2,
+            }),
           },
         },
       }}

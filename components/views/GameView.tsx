@@ -54,7 +54,7 @@ export default function GameView({
       sx={{
         minHeight: '100vh',
         background: 'linear-gradient(to bottom right, #eff6ff, #eef2ff)',
-        p: 4,
+        p: { xs: 2, sm: 4 },
       }}
     >
       <NavBar
