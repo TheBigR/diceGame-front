@@ -4,12 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { GameState, DiceRoll } from '@/types';
 import Dice from './Dice';
 import { storage } from '@/lib/storage';
-import { Box, Button, Typography, Paper, Alert, Chip, CircularProgress } from '@mui/material';
+import { Box, Button, Typography, Paper, Alert, Chip, CircularProgress, Dialog, DialogTitle, IconButton } from '@mui/material';
 import CasinoIcon from '@mui/icons-material/Casino';
 import SaveIcon from '@mui/icons-material/Save';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import CloseIcon from '@mui/icons-material/Close';
+import FlagIcon from '@mui/icons-material/Flag';
 
 interface GameBoardProps {
   game: GameState;
@@ -18,6 +20,7 @@ interface GameBoardProps {
   onHold: () => Promise<void>;
   onNewGame: () => Promise<void>;
   onAbandonGame: () => Promise<void>;
+  onEndGame: () => Promise<void>;
   isRolling: boolean;
   lastRoll?: DiceRoll | null;
   isDoubleSix: boolean;
@@ -31,6 +34,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   onHold,
   onNewGame,
   onAbandonGame,
+  onEndGame,
   isRolling,
   lastRoll,
   isDoubleSix,
@@ -51,8 +55,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
   useEffect(() => {
     if (isDoubleSix) {
       setShowDoubleSixMessage(true);
-      const timer = setTimeout(() => setShowDoubleSixMessage(false), 3000);
+      const timer = setTimeout(() => {
+        setShowDoubleSixMessage(false);
+      }, 3000);
       return () => clearTimeout(timer);
+    } else {
+      setShowDoubleSixMessage(false);
     }
   }, [isDoubleSix]);
 
@@ -74,26 +82,60 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
   return (
     <Box sx={{ maxWidth: '56rem', mx: 'auto', p: 3 }}>
-      {/* Double Six Message */}
-      {showDoubleSixMessage && (
-        <Alert 
-          severity="error" 
-          icon={<CasinoIcon />}
-          sx={{ mb: 2, textAlign: 'center', animation: 'bounce 1s infinite' }}
+      {/* Double Six Modal */}
+      <Dialog
+        open={showDoubleSixMessage}
+        onClose={() => setShowDoubleSixMessage(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            position: 'relative',
+            textAlign: 'center',
+            p: 3,
+          },
+        }}
+      >
+        <IconButton
+          aria-label="close"
+          onClick={() => setShowDoubleSixMessage(false)}
+          sx={{
+            position: 'absolute',
+            left: 8,
+            top: 8,
+            color: 'grey.500',
+          }}
         >
-          <Typography variant="h6" component="strong">
-            Double Six! Round score lost!
-          </Typography>
-        </Alert>
-      )}
+          <CloseIcon />
+        </IconButton>
+        <DialogTitle sx={{ textAlign: 'center', pt: 4 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <CasinoIcon sx={{ fontSize: 60, color: 'error.main' }} />
+            <Typography variant="h4" component="strong" sx={{ color: 'error.main', fontWeight: 'bold' }}>
+              Double Six!
+            </Typography>
+            <Typography variant="h6" sx={{ color: 'text.secondary' }}>
+              Round score lost!
+            </Typography>
+          </Box>
+        </DialogTitle>
+      </Dialog>
 
       {/* Game Over Message */}
-      {game.status === 'finished' && game.winnerId && (
-        <Alert severity="success" sx={{ mb: 2, textAlign: 'center' }}>
-          <Typography variant="h5" component="strong">
-            {game.winnerId === game.player1.id ? game.player1.username : game.player2.username} Wins!
-          </Typography>
-        </Alert>
+      {game.status === 'finished' && (
+        game.winnerId ? (
+          <Alert severity="success" sx={{ mb: 2, textAlign: 'center' }}>
+            <Typography variant="h5" component="strong">
+              {game.winnerId === game.player1.id ? game.player1.username : game.player2.username} Wins!
+            </Typography>
+          </Alert>
+        ) : (
+          <Alert severity="info" sx={{ mb: 2, textAlign: 'center' }}>
+            <Typography variant="h5" component="strong">
+              It's a Tie! Both players have {game.player1Score} points.
+            </Typography>
+          </Alert>
+        )
       )}
 
       {/* Player Scores */}
@@ -166,8 +208,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
       </Box>
 
       {/* Dice Display */}
-      <Paper sx={{ bgcolor: 'grey.100', p: 4, mb: 3, textAlign: 'center' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3, mb: 2 }}>
+      <Paper sx={{ bgcolor: 'grey.100', p: 4, mb: 3, textAlign: 'center', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3, mb: 2, minHeight: '120px' }}>
           {lastRoll ? (
             <>
               <Dice value={lastRoll.die1} isRolling={diceRolling} size="lg" />
@@ -180,11 +222,17 @@ const GameBoard: React.FC<GameBoardProps> = ({
             </>
           )}
         </Box>
-        {lastRoll && (
-          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-            Rolled: {lastRoll.die1} + {lastRoll.die2} = {lastRoll.die1 + lastRoll.die2}
-          </Typography>
-        )}
+        <Box sx={{ minHeight: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {lastRoll ? (
+            <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+              Rolled: {lastRoll.die1} + {lastRoll.die2} = {lastRoll.die1 + lastRoll.die2}
+            </Typography>
+          ) : (
+            <Typography variant="body1" sx={{ color: 'transparent' }}>
+              &nbsp;
+            </Typography>
+          )}
+        </Box>
       </Paper>
 
       {/* Game Info */}
@@ -206,7 +254,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       </Paper>
 
       {/* Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', minHeight: '56px', alignItems: 'center' }}>
         {game.status === 'active' && isMyTurn && (
           <>
             <Button
@@ -216,6 +264,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               startIcon={isRolling ? <CircularProgress size={20} color="inherit" /> : <CasinoIcon />}
               onClick={onRoll}
               disabled={isRolling || showDoubleSixMessage}
+              sx={{ minWidth: '140px' }}
             >
               {isRolling ? 'Rolling...' : 'Roll Dice'}
             </Button>
@@ -226,8 +275,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
               startIcon={<SaveIcon />}
               onClick={onHold}
               disabled={isRolling || showDoubleSixMessage}
+              sx={{ minWidth: '140px' }}
             >
-              Hold
+              End Turn
             </Button>
           </>
         )}
@@ -237,19 +287,33 @@ const GameBoard: React.FC<GameBoardProps> = ({
           size="large"
           startIcon={<RefreshIcon />}
           onClick={onNewGame}
+          sx={{ minWidth: '140px' }}
         >
           New Game
         </Button>
         {(game.status === 'waiting' || game.status === 'active') && (
-          <Button
-            variant="contained"
-            color="error"
-            size="large"
-            startIcon={<DeleteIcon />}
-            onClick={onAbandonGame}
-          >
-            Abandon Game
-          </Button>
+          <>
+            <Button
+              variant="contained"
+              color="success"
+              size="large"
+              startIcon={<FlagIcon />}
+              onClick={onEndGame}
+              sx={{ minWidth: '140px' }}
+            >
+              End Game
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              size="large"
+              startIcon={<DeleteIcon />}
+              onClick={onAbandonGame}
+              sx={{ minWidth: '140px' }}
+            >
+              Abandon Game
+            </Button>
+          </>
         )}
       </Box>
     </Box>

@@ -2,6 +2,7 @@
 
 const WINS_KEY = 'dice_game_wins';
 const USER_PREF_KEY = 'dice_game_preferences';
+const AI_CREDENTIALS_KEY = 'dice_game_ai_credentials';
 
 export interface WinsRecord {
   [userId: string]: number;
@@ -46,6 +47,23 @@ export const storage = {
   savePreferences(prefs: UserPreferences): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem(USER_PREF_KEY, JSON.stringify(prefs));
+  },
+
+  // AI credentials storage
+  saveAICredentials(username: string, password: string): void {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(AI_CREDENTIALS_KEY, JSON.stringify({ username, password }));
+  },
+
+  getAICredentials(): { username: string; password: string } | null {
+    if (typeof window === 'undefined') return null;
+    const data = localStorage.getItem(AI_CREDENTIALS_KEY);
+    return data ? JSON.parse(data) : null;
+  },
+
+  clearAICredentials(): void {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(AI_CREDENTIALS_KEY);
   },
 };
 

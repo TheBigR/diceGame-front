@@ -9,7 +9,7 @@ import GameBoard from '@/components/GameBoard';
 import { storage } from '@/lib/storage';
 import { soundManager } from '@/lib/sounds';
 import { useAIPlayer } from '@/hooks/useAIPlayer';
-import { Box, Button, Typography, Alert, IconButton, Tooltip, Paper, CircularProgress, TextField, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from '@mui/material';
+import { Box, Button, Typography, Alert, IconButton, Tooltip, Paper, CircularProgress, TextField, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import CasinoIcon from '@mui/icons-material/Casino';
 import AddIcon from '@mui/icons-material/Add';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
@@ -32,9 +32,10 @@ export default function GamePage() {
   const [isDoubleSix, setIsDoubleSix] = useState(false);
   const [error, setError] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [abandonDialogOpen, setAbandonDialogOpen] = useState(false);
   
   // AI Player hook
-  const { aiUser, registerAI, clearAI, aiName } = useAIPlayer({
+  const { aiUser, registerAI, clearAI, aiName, isAIGame, restoreAIForGame } = useAIPlayer({
     game,
     currentUserId: user?.id || '',
     isRolling,
@@ -132,9 +133,36 @@ export default function GamePage() {
 
       if (response.isDoubleSix) {
         soundManager.playDoubleSix();
+        // Double six: round score should be 0, turn should switch, game should continue
+        // Verify the backend handled it correctly
+        const currentPlayer = response.gameState.currentPlayerId === response.gameState.player1.id 
+          ? response.gameState.player1 
+          : response.gameState.player2;
+        const previousPlayer = response.gameState.currentPlayerId === response.gameState.player1.id 
+          ? response.gameState.player2 
+          : response.gameState.player1;
+        const previousRoundScore = previousPlayer.id === response.gameState.player1.id 
+          ? response.gameState.player1RoundScore 
+          : response.gameState.player2RoundScore;
+        
+        // The previous player's round score should be 0 after double six
+        if (previousRoundScore !== 0) {
+          console.warn('Double six occurred but round score was not reset to 0');
+        }
+        
+        // The game should still be active
+        if (response.gameState.status !== 'active') {
+          console.warn('Double six occurred but game status is not active:', response.gameState.status);
+        }
+        
+        // Clear the last roll after a delay so the message is visible
+        setTimeout(() => {
+          setLastRoll(null);
+          setIsDoubleSix(false);
+        }, 3000);
       }
 
-      // Track win if game is over
+      // Track win if game is over (but double six should NOT end the game)
       if (response.gameState.status === 'finished' && response.gameState.winnerId) {
         const winner = response.gameState.winnerId === response.gameState.player1.id
           ? response.gameState.player1
@@ -176,21 +204,34 @@ export default function GamePage() {
 
     try {
       setError('');
+      const wasAIGame = isAIGame(game);
       const newGameState = await apiClient.newGame(game.id);
       setGame(newGameState);
       setLastRoll(null);
       setIsDoubleSix(false);
+      
+      // If the original game had an AI opponent, restore AI for the new game
+      if (wasAIGame) {
+        // Check if the new game still has the same AI player
+        const newGameHasAI = isAIGame(newGameState);
+        if (newGameHasAI && !aiUser) {
+          // AI user might not match new game's player IDs, restore it
+          await restoreAIForGame(newGameState);
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to start new game');
     }
   };
 
-  const handleAbandonGame = async () => {
+  const handleAbandonGameClick = async () => {
+    setAbandonDialogOpen(true);
+  };
+
+  const handleAbandonGameConfirm = async () => {
     if (!game) return;
 
-    if (!confirm('Are you sure you want to abandon this game? This action cannot be undone.')) {
-      return;
-    }
+    setAbandonDialogOpen(false);
 
     try {
       setError('');
@@ -205,6 +246,52 @@ export default function GamePage() {
       setGame(null);
       setError('');
       setViewMode('menu');
+    }
+  };
+
+  const handleAbandonGameCancel = () => {
+    setAbandonDialogOpen(false);
+  };
+
+  const handleEndGame = async () => {
+    if (!game) return;
+
+    try {
+      setError('');
+      // Try to call API endpoint, if it doesn't exist, handle client-side
+      try {
+        const updatedGame = await apiClient.endGame(game.id);
+        setGame(updatedGame);
+      } catch (apiError: any) {
+        // If API endpoint doesn't exist, determine winner client-side
+        console.log('API endpoint not available, determining winner client-side');
+        const winnerId = game.player1Score > game.player2Score 
+          ? game.player1.id 
+          : game.player2Score > game.player1Score 
+          ? game.player2.id 
+          : undefined; // Tie
+        
+        const winner = winnerId 
+          ? (winnerId === game.player1.id ? game.player1 : game.player2)
+          : null;
+        
+        if (winner) {
+          storage.incrementWin(winner.userId);
+          soundManager.playWin();
+        } else {
+          // It's a tie - no winner
+          console.log('Game ended in a tie');
+        }
+        
+        // Update game state to finished
+        setGame({
+          ...game,
+          status: 'finished',
+          winnerId: winnerId, // undefined for ties
+        });
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to end game');
     }
   };
 
@@ -547,12 +634,38 @@ export default function GamePage() {
         onRoll={handleRoll}
         onHold={handleHold}
         onNewGame={handleNewGame}
-        onAbandonGame={handleAbandonGame}
+        onAbandonGame={handleAbandonGameClick}
+        onEndGame={handleEndGame}
         isRolling={isRolling}
         lastRoll={lastRoll}
         isDoubleSix={isDoubleSix}
         aiName={aiName}
       />
+
+      {/* Abandon Game Confirmation Dialog */}
+      <Dialog
+        open={abandonDialogOpen}
+        onClose={handleAbandonGameCancel}
+        aria-labelledby="abandon-dialog-title"
+        aria-describedby="abandon-dialog-description"
+      >
+        <DialogTitle id="abandon-dialog-title">
+          Abandon Game?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="abandon-dialog-description">
+            Are you sure you want to abandon this game? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleAbandonGameCancel} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleAbandonGameConfirm} color="error" variant="contained" autoFocus>
+            Abandon Game
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

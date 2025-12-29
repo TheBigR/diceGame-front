@@ -140,6 +140,12 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  async endGame(gameId: string): Promise<GameState> {
+    return this.request<GameState>(`/api/games/${gameId}/end`, {
+      method: 'POST',
+    });
+  }
 }
 
 export const apiClient = new ApiClient();
