@@ -43,10 +43,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string) => {
-    const response = await apiClient.login(username, password);
-    setToken(response.token);
-    setUser(response.user);
-    localStorage.setItem('token', response.token);
+    try {
+      const response = await apiClient.login(username, password);
+      setToken(response.token);
+      setUser(response.user);
+      localStorage.setItem('token', response.token);
+      console.log('Login successful, token stored:', response.token.substring(0, 20) + '...');
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      throw error; // Re-throw so AuthForm can display the error
+    }
   };
 
   const register = async (username: string, password: string) => {

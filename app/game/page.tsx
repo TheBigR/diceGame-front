@@ -16,12 +16,17 @@ import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import DeleteIcon from '@mui/icons-material/Delete';
+
+type ViewMode = 'menu' | 'create' | 'game' | 'games-list';
 
 export default function GamePage() {
   const { user, logout, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const [viewMode, setViewMode] = useState<ViewMode>('menu');
   const [game, setGame] = useState<GameState | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [availableGames, setAvailableGames] = useState<GameState[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRolling, setIsRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState<DiceRoll | null>(null);
   const [isDoubleSix, setIsDoubleSix] = useState(false);
@@ -47,35 +52,32 @@ export default function GamePage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (user) {
-      loadGame();
-    }
-  }, [user]);
-
-  useEffect(() => {
     // Initialize sound state from soundManager
     setSoundEnabled(soundManager.isEnabled());
   }, []);
 
-  const loadGame = async () => {
+  const loadAvailableGames = async () => {
     try {
       setIsLoading(true);
+      setError('');
       const games = await apiClient.getMyGames();
-      if (games.length > 0) {
-        // Load the most recent active game, or the most recent game
-        const activeGame = games.find((g) => g.status === 'active') || games[0];
-        setGame(activeGame);
-        if (activeGame) {
-          const fullGame = await apiClient.getGame(activeGame.id);
-          setGame(fullGame);
-          
-          // Check if this game has an AI player - try to match by checking if player2 username matches a pattern
-          // or if we need to restore aiUser from storage
-          // For now, we'll rely on the aiUser state being set when creating the game
-        }
-      }
+      setAvailableGames(games);
     } catch (err: any) {
       setError(err.message || 'Failed to load games');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadGame = async (gameId: string) => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const fullGame = await apiClient.getGame(gameId);
+      setGame(fullGame);
+      setViewMode('game');
+    } catch (err: any) {
+      setError(err.message || 'Failed to load game');
     } finally {
       setIsLoading(false);
     }
@@ -108,6 +110,7 @@ export default function GamePage() {
         winningScore,
       });
       setGame(newGame);
+      setViewMode('game');
     } catch (err: any) {
       setError(err.message || 'Failed to create game');
     } finally {
@@ -192,20 +195,70 @@ export default function GamePage() {
     try {
       setError('');
       await apiClient.deleteGame(game.id);
-      setGame(null); // Return to game creation screen
+      setGame(null);
       setLastRoll(null);
       setIsDoubleSix(false);
+      clearAI();
+      setViewMode('menu');
     } catch (err: any) {
       // If delete fails, just clear the game locally (might not exist on backend)
       setGame(null);
       setError('');
+      setViewMode('menu');
     }
   };
 
-  if (authLoading || isLoading) {
+  const handleBackToMenu = () => {
+    setGame(null);
+    setLastRoll(null);
+    setIsDoubleSix(false);
+    clearAI();
+    setViewMode('menu');
+    setError('');
+  };
+
+  const handleDeleteGame = async (gameId: string) => {
+    if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
+      return;
+    }
+
+    if (!user) {
+      setError('You must be logged in to delete games. Please log in first.');
+      return;
+    }
+
+    try {
+      setError('');
+      setIsLoading(true);
+      console.log('Deleting game with ID:', gameId);
+      console.log('Current user:', user?.username);
+      console.log('Token in localStorage:', !!localStorage.getItem('token'));
+      
+      await apiClient.deleteGame(gameId);
+      console.log('Game deleted successfully');
+      // Remove the game from the list
+      setAvailableGames(prevGames => {
+        const filtered = prevGames.filter(g => g.id !== gameId);
+        console.log('Updated games list, removed game:', gameId, 'Remaining:', filtered.length);
+        return filtered;
+      });
+    } catch (err: any) {
+      console.error('Error deleting game:', err);
+      console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        gameId: gameId,
+      });
+      setError(err.message || 'Failed to delete game');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (authLoading) {
     return (
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography variant="h5">Loading...</Typography>
+        <CircularProgress />
       </Box>
     );
   }
@@ -214,7 +267,88 @@ export default function GamePage() {
     return null;
   }
 
-  if (!game) {
+  // Main Menu View
+  if (viewMode === 'menu') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          background: 'linear-gradient(to bottom right, #eff6ff, #eef2ff)',
+          p: 4,
+        }}
+      >
+        <Box sx={{ maxWidth: '48rem', mx: 'auto' }}>
+          <Box sx={{ mb: 4, textAlign: 'center' }}>
+            <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+              <CasinoIcon sx={{ fontSize: '3rem' }} /> Dice Game
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+              Welcome, {user.username}!
+            </Typography>
+          </Box>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Paper elevation={3} sx={{ p: 4 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<AddIcon />}
+                onClick={() => setViewMode('create')}
+                sx={{ py: 1.5 }}
+              >
+                Create New Game
+              </Button>
+              
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<CasinoIcon />}
+                onClick={async () => {
+                  await loadAvailableGames();
+                  setViewMode('games-list');
+                }}
+                sx={{ py: 1.5 }}
+              >
+                Continue Existing Game
+              </Button>
+
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 2 }}>
+                <Tooltip title={soundEnabled ? 'Disable sounds' : 'Enable sounds'}>
+                  <IconButton
+                    color={soundEnabled ? 'primary' : 'default'}
+                    onClick={() => {
+                      const newState = !soundEnabled;
+                      setSoundEnabled(newState);
+                      soundManager.setEnabled(newState);
+                    }}
+                  >
+                    {soundEnabled ? <VolumeUpIcon /> : <VolumeOffIcon />}
+                  </IconButton>
+                </Tooltip>
+                <Button
+                  variant="outlined"
+                  startIcon={<LogoutIcon />}
+                  onClick={logout}
+                  color="inherit"
+                >
+                  Logout
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Create Game View
+  if (viewMode === 'create') {
     return (
       <Box
         sx={{
@@ -225,27 +359,121 @@ export default function GamePage() {
       >
         <Box sx={{ maxWidth: '42rem', mx: 'auto' }}>
           <Paper elevation={3} sx={{ p: 4 }}>
-            <Typography variant="h4" component="h2" sx={{ fontWeight: 'bold', mb: 3 }}>
-              Create New Game
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h4" component="h2" sx={{ fontWeight: 'bold' }}>
+                Create New Game
+              </Typography>
+              <Button onClick={handleBackToMenu} color="inherit">
+                Back to Menu
+              </Button>
+            </Box>
             <CreateGameForm onCreateGame={createGame} currentUsername={user.username} />
             {error && (
               <Alert severity="error" sx={{ mt: 2 }}>
                 {error}
               </Alert>
             )}
-            <Button
-              onClick={logout}
-              sx={{ mt: 2 }}
-              size="small"
-              color="inherit"
-            >
-              Logout
-            </Button>
           </Paper>
         </Box>
       </Box>
     );
+  }
+
+  // Games List View
+  if (viewMode === 'games-list') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          background: 'linear-gradient(to bottom right, #eff6ff, #eef2ff)',
+          p: 4,
+        }}
+      >
+        <Box sx={{ maxWidth: '48rem', mx: 'auto' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h4" component="h2" sx={{ fontWeight: 'bold' }}>
+              Your Games
+            </Typography>
+            <Button onClick={handleBackToMenu} color="inherit">
+              Back to Menu
+            </Button>
+          </Box>
+
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : availableGames.length === 0 ? (
+            <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="body1" sx={{ color: 'text.secondary', mb: 2 }}>
+                No games found. Create a new game to get started!
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setViewMode('create')}
+              >
+                Create New Game
+              </Button>
+            </Paper>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {availableGames.map((g) => (
+                <Paper key={g.id} elevation={2} sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        {g.player1.username} vs {g.player2.username}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                        Status: {g.status} | Winning Score: {g.winningScore}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Scores: {g.player1Score} - {g.player2Score}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <Button
+                        variant="contained"
+                        onClick={() => loadGame(g.id)}
+                        disabled={isLoading}
+                      >
+                        Continue
+                      </Button>
+                      <Tooltip title="Delete game">
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDeleteGame(g.id)}
+                          disabled={isLoading}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Box>
+                </Paper>
+              ))}
+            </Box>
+          )}
+
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+        </Box>
+      </Box>
+    );
+  }
+
+  // Game View (when playing)
+  if (viewMode === 'game' && !game) {
+    setViewMode('menu');
+    return null;
+  }
+
+  if (!game) {
+    return null;
   }
 
   return (
@@ -279,10 +507,10 @@ export default function GamePage() {
             variant="contained"
             color="secondary"
             startIcon={<AddIcon />}
-            onClick={() => setGame(null)}
-            title="Create a new game"
+            onClick={handleBackToMenu}
+            title="Back to main menu"
           >
-            New Game
+            Main Menu
           </Button>
           <Tooltip title={soundEnabled ? 'Disable sounds' : 'Enable sounds'}>
             <IconButton

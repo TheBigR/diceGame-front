@@ -28,19 +28,57 @@ class ApiClient {
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      console.log(`[API] Token present: ${token.substring(0, 20)}...`);
+    } else {
+      console.warn(`[API] No token found for ${options.method || 'GET'} ${endpoint}`);
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = `${API_BASE_URL}${endpoint}`;
+    console.log(`[API] ${options.method || 'GET'} ${url}`, { 
+      hasToken: !!token,
+      headers: { ...headers, Authorization: token ? `Bearer ${token.substring(0, 20)}...` : 'none' },
+      body: options.body 
+    });
+    
+    const response = await fetch(url, {
       ...options,
       headers,
     });
+    
+    console.log(`[API] Response status: ${response.status} for ${options.method || 'GET'} ${url}`);
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error || `HTTP error! status: ${response.status}`);
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        // Read as text first, then try to parse as JSON
+        const text = await response.text();
+        if (text) {
+          try {
+            const error = JSON.parse(text);
+            errorMessage = error.error || error.message || errorMessage;
+          } catch {
+            // Not JSON, use the text as error message
+            errorMessage = text || errorMessage;
+          }
+        }
+      } catch {
+        // If we can't read the response, use the status-based message
+      }
+      throw new Error(errorMessage);
     }
 
-    return response.json();
+    // Handle empty responses (e.g., 204 No Content for DELETE requests)
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return undefined as T;
+    }
+
+    // Try to parse JSON, but handle empty responses gracefully
+    const text = await response.text();
+    if (!text) {
+      return undefined as T;
+    }
+
+    return JSON.parse(text);
   }
 
   // Auth endpoints
