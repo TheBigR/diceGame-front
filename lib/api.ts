@@ -17,12 +17,13 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    customToken?: string | null
   ): Promise<T> {
-    const token = this.getToken();
-    const headers: HeadersInit = {
+    const token = customToken || this.getToken();
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string> || {}),
     };
 
     if (token) {
@@ -77,22 +78,28 @@ class ApiClient {
     return this.request<GameState[]>('/api/games/my-games');
   }
 
-  async rollDice(gameId: string): Promise<RollDiceResponse> {
+  async rollDice(gameId: string, token?: string): Promise<RollDiceResponse> {
     return this.request<RollDiceResponse>(`/api/games/${gameId}/roll`, {
       method: 'POST',
-    });
+    }, token);
   }
 
-  async hold(gameId: string): Promise<HoldResponse> {
+  async hold(gameId: string, token?: string): Promise<HoldResponse> {
     return this.request<HoldResponse>(`/api/games/${gameId}/hold`, {
       method: 'POST',
-    });
+    }, token);
   }
 
   async newGame(gameId: string, winningScore?: number): Promise<GameState> {
     return this.request<GameState>(`/api/games/${gameId}/new-game`, {
       method: 'POST',
       body: JSON.stringify({ winningScore }),
+    });
+  }
+
+  async deleteGame(gameId: string): Promise<void> {
+    return this.request<void>(`/api/games/${gameId}`, {
+      method: 'DELETE',
     });
   }
 }

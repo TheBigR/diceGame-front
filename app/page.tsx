@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import AuthForm from '@/components/AuthForm';
+import { Box, Typography, CircularProgress } from '@mui/material';
+import CasinoIcon from '@mui/icons-material/Casino';
 
 export default function Home() {
   const { user, login, register, isLoading } = useAuth();
@@ -17,9 +19,9 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
-      </div>
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
@@ -28,14 +30,23 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto">
-        <div className="text-center pt-12 mb-8">
-          <h1 className="text-5xl font-bold text-gray-800 mb-2">🎲 Dice Game</h1>
-          <p className="text-gray-600">Roll the dice and be the first to reach the winning score!</p>
-        </div>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(to bottom right, #eff6ff, #eef2ff)',
+      }}
+    >
+      <Box sx={{ maxWidth: 'container', mx: 'auto' }}>
+        <Box sx={{ textAlign: 'center', pt: 6, mb: 4 }}>
+          <Typography variant="h2" component="h1" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+            <CasinoIcon sx={{ fontSize: '3rem' }} /> Dice Game
+          </Typography>
+          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+            Roll the dice and be the first to reach the winning score!
+          </Typography>
+        </Box>
         <AuthForm onLogin={login} onRegister={register} isLoading={isLoading} />
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

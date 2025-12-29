@@ -4,6 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { GameState, DiceRoll } from '@/types';
 import Dice from './Dice';
 import { storage } from '@/lib/storage';
+import { Box, Button, Typography, Paper, Alert, Chip, CircularProgress } from '@mui/material';
+import CasinoIcon from '@mui/icons-material/Casino';
+import SaveIcon from '@mui/icons-material/Save';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 
 interface GameBoardProps {
   game: GameState;
@@ -11,9 +17,11 @@ interface GameBoardProps {
   onRoll: () => Promise<void>;
   onHold: () => Promise<void>;
   onNewGame: () => Promise<void>;
+  onAbandonGame: () => Promise<void>;
   isRolling: boolean;
   lastRoll?: DiceRoll | null;
   isDoubleSix: boolean;
+  aiName?: string | null;
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({
@@ -22,9 +30,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
   onRoll,
   onHold,
   onNewGame,
+  onAbandonGame,
   isRolling,
   lastRoll,
   isDoubleSix,
+  aiName,
 }) => {
   const [showDoubleSixMessage, setShowDoubleSixMessage] = useState(false);
   const [diceRolling, setDiceRolling] = useState(false);
@@ -49,87 +59,115 @@ const GameBoard: React.FC<GameBoardProps> = ({
   useEffect(() => {
     if (isRolling) {
       setDiceRolling(true);
-      const timer = setTimeout(() => setDiceRolling(false), 1000);
+      const timer = setTimeout(() => {
+        setDiceRolling(false);
+      }, 15900); // Stop after 1.5 seconds
       return () => clearTimeout(timer);
+    } else {
+      // Stop rolling immediately if isRolling becomes false
+      setDiceRolling(false);
     }
-  }, [isRolling, lastRoll]);
+  }, [isRolling]);
 
   const player1Wins = storage.getWinCount(game.player1.userId);
   const player2Wins = storage.getWinCount(game.player2.userId);
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <Box sx={{ maxWidth: '56rem', mx: 'auto', p: 3 }}>
       {/* Double Six Message */}
       {showDoubleSixMessage && (
-        <div className="mb-4 p-4 bg-red-500 text-white rounded-lg text-center animate-bounce">
-          <p className="text-xl font-bold">🎲 Double Six! Round score lost! 🎲</p>
-        </div>
+        <Alert 
+          severity="error" 
+          icon={<CasinoIcon />}
+          sx={{ mb: 2, textAlign: 'center', animation: 'bounce 1s infinite' }}
+        >
+          <Typography variant="h6" component="strong">
+            Double Six! Round score lost!
+          </Typography>
+        </Alert>
       )}
 
       {/* Game Over Message */}
       {game.status === 'finished' && game.winnerId && (
-        <div className="mb-4 p-4 bg-green-500 text-white rounded-lg text-center">
-          <p className="text-2xl font-bold">
-            🎉 {game.winnerId === game.player1.id ? game.player1.username : game.player2.username}{' '}
-            Wins! 🎉
-          </p>
-        </div>
+        <Alert severity="success" sx={{ mb: 2, textAlign: 'center' }}>
+          <Typography variant="h5" component="strong">
+            {game.winnerId === game.player1.id ? game.player1.username : game.player2.username} Wins!
+          </Typography>
+        </Alert>
       )}
 
       {/* Player Scores */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 3 }}>
         {/* Player 1 */}
-        <div
-          className={`
-            p-6 rounded-lg border-2 transition-all
-            ${
-              game.currentPlayerId === game.player1.id
-                ? 'border-blue-500 bg-blue-50 shadow-lg'
-                : 'border-gray-300 bg-white'
-            }
-          `}
+        <Paper
+          elevation={game.currentPlayerId === game.player1.id ? 4 : 1}
+          sx={{
+            p: 3,
+            border: 2,
+            borderColor: game.currentPlayerId === game.player1.id ? 'primary.main' : 'grey.300',
+            bgcolor: game.currentPlayerId === game.player1.id ? 'primary.50' : 'background.paper',
+            transition: 'all 0.3s',
+          }}
         >
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xl font-bold">{game.player1.username}</h3>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+              {game.player1.username}
+              {aiName && game.player1.username === aiName && (
+                <Chip icon={<SmartToyIcon />} label="AI" size="small" color="secondary" />
+              )}
+            </Typography>
             {game.currentPlayerId === game.player1.id && (
-              <span className="text-sm bg-blue-500 text-white px-2 py-1 rounded">Your Turn</span>
+              <Chip label="Your Turn" size="small" color="primary" />
             )}
-          </div>
-          <div className="text-3xl font-bold text-blue-600 mb-1">{game.player1Score}</div>
-          <div className="text-sm text-gray-600">
-            Round: <span className="font-semibold">{game.player1RoundScore}</span>
-          </div>
-          <div className="text-xs text-gray-500 mt-1">Wins: {player1Wins}</div>
-        </div>
+          </Box>
+          <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.5 }}>
+            {game.player1Score}
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            Round: <strong>{game.player1RoundScore}</strong>
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'text.disabled', mt: 0.5, display: 'block' }}>
+            Wins: {player1Wins}
+          </Typography>
+        </Paper>
 
         {/* Player 2 */}
-        <div
-          className={`
-            p-6 rounded-lg border-2 transition-all
-            ${
-              game.currentPlayerId === game.player2.id
-                ? 'border-blue-500 bg-blue-50 shadow-lg'
-                : 'border-gray-300 bg-white'
-            }
-          `}
+        <Paper
+          elevation={game.currentPlayerId === game.player2.id ? 4 : 1}
+          sx={{
+            p: 3,
+            border: 2,
+            borderColor: game.currentPlayerId === game.player2.id ? 'primary.main' : 'grey.300',
+            bgcolor: game.currentPlayerId === game.player2.id ? 'primary.50' : 'background.paper',
+            transition: 'all 0.3s',
+          }}
         >
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xl font-bold">{game.player2.username}</h3>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+              {game.player2.username}
+              {aiName && game.player2.username === aiName && (
+                <Chip icon={<SmartToyIcon />} label="AI" size="small" color="secondary" />
+              )}
+            </Typography>
             {game.currentPlayerId === game.player2.id && (
-              <span className="text-sm bg-blue-500 text-white px-2 py-1 rounded">Your Turn</span>
+              <Chip label="Your Turn" size="small" color="primary" />
             )}
-          </div>
-          <div className="text-3xl font-bold text-blue-600 mb-1">{game.player2Score}</div>
-          <div className="text-sm text-gray-600">
-            Round: <span className="font-semibold">{game.player2RoundScore}</span>
-          </div>
-          <div className="text-xs text-gray-500 mt-1">Wins: {player2Wins}</div>
-        </div>
-      </div>
+          </Box>
+          <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.5 }}>
+            {game.player2Score}
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            Round: <strong>{game.player2RoundScore}</strong>
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'text.disabled', mt: 0.5, display: 'block' }}>
+            Wins: {player2Wins}
+          </Typography>
+        </Paper>
+      </Box>
 
       {/* Dice Display */}
-      <div className="bg-gray-100 p-8 rounded-lg mb-6">
-        <div className="flex justify-center items-center gap-6 mb-4">
+      <Paper sx={{ bgcolor: 'grey.100', p: 4, mb: 3, textAlign: 'center' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3, mb: 2 }}>
           {lastRoll ? (
             <>
               <Dice value={lastRoll.die1} isRolling={diceRolling} size="lg" />
@@ -141,61 +179,80 @@ const GameBoard: React.FC<GameBoardProps> = ({
               <Dice value={1} size="lg" />
             </>
           )}
-        </div>
+        </Box>
         {lastRoll && (
-          <p className="text-center text-gray-600">
+          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
             Rolled: {lastRoll.die1} + {lastRoll.die2} = {lastRoll.die1 + lastRoll.die2}
-          </p>
+          </Typography>
         )}
-      </div>
+      </Paper>
 
       {/* Game Info */}
-      <div className="bg-gray-50 p-4 rounded-lg mb-6 text-center">
-        <p className="text-gray-700">
-          Winning Score: <span className="font-bold">{game.winningScore}</span>
-        </p>
-        <p className="text-sm text-gray-500 mt-1">
-          {isMyTurn ? "It's your turn!" : `Waiting for ${currentPlayer.username}...`}
-        </p>
-      </div>
+      <Paper sx={{ bgcolor: 'grey.50', p: 2, mb: 3, textAlign: 'center' }}>
+        <Typography variant="body1" sx={{ color: 'text.primary' }}>
+          Winning Score: <strong>{game.winningScore}</strong>
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+          {isMyTurn ? "It's your turn!" : aiName && currentPlayer.username === aiName ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+              <CircularProgress size={16} />
+              <SmartToyIcon fontSize="small" />
+              {aiName} is thinking...
+            </Box>
+          ) : (
+            `Waiting for ${currentPlayer.username}...`
+          )}
+        </Typography>
+      </Paper>
 
       {/* Action Buttons */}
-      <div className="flex gap-4 justify-center">
+      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
         {game.status === 'active' && isMyTurn && (
           <>
-            <button
+            <Button
+              variant="contained"
+              color="success"
+              size="large"
+              startIcon={isRolling ? <CircularProgress size={20} color="inherit" /> : <CasinoIcon />}
               onClick={onRoll}
               disabled={isRolling || showDoubleSixMessage}
-              className={`
-                px-6 py-3 bg-green-500 text-white rounded-lg font-semibold
-                hover:bg-green-600 transition-colors
-                disabled:opacity-50 disabled:cursor-not-allowed
-                ${isRolling ? 'animate-pulse' : ''}
-              `}
             >
-              {isRolling ? 'Rolling...' : '🎲 Roll Dice'}
-            </button>
-            <button
+              {isRolling ? 'Rolling...' : 'Roll Dice'}
+            </Button>
+            <Button
+              variant="contained"
+              color="warning"
+              size="large"
+              startIcon={<SaveIcon />}
               onClick={onHold}
               disabled={isRolling || showDoubleSixMessage}
-              className={`
-                px-6 py-3 bg-orange-500 text-white rounded-lg font-semibold
-                hover:bg-orange-600 transition-colors
-                disabled:opacity-50 disabled:cursor-not-allowed
-              `}
             >
-              📥 Hold
-            </button>
+              Hold
+            </Button>
           </>
         )}
-        <button
+        <Button
+          variant="contained"
+          color="inherit"
+          size="large"
+          startIcon={<RefreshIcon />}
           onClick={onNewGame}
-          className="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
         >
-          🔄 New Game
-        </button>
-      </div>
-    </div>
+          New Game
+        </Button>
+        {(game.status === 'waiting' || game.status === 'active') && (
+          <Button
+            variant="contained"
+            color="error"
+            size="large"
+            startIcon={<DeleteIcon />}
+            onClick={onAbandonGame}
+          >
+            Abandon Game
+          </Button>
+        )}
+      </Box>
+    </Box>
   );
 };
 
