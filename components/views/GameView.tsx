@@ -50,11 +50,14 @@ export default function GameView({
   return (
     <Box
       sx={{
-        height: '100vh',
+        minHeight: '100vh',
         background: 'linear-gradient(to bottom right, #eff6ff, #eef2ff)',
-        px: { xs: 2, sm: 4 },
-        pt: { xs: 2, sm: 4 },
-        pb: { xs: 2, sm: 4 },
+        px: { xs: 1, sm: 4 },
+        pt: { xs: 1, sm: 4 },
+        pb: { xs: 1, sm: 4 },
+        width: '100%',
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
       }}
     >
       <NavBar

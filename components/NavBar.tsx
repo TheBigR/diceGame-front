@@ -42,21 +42,24 @@ export default function NavBar({
       elevation={3}
       sx={{
         mb: 1,
-        px: { xs: 1, sm: 3 },
-        py: { xs: 0.5, sm: 0 },
+        px: { xs: 1.5, sm: 3 },
+        py: { xs: 0.75, sm: 1 },
         display: 'flex',
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        gap: { xs: 0.5, sm: 0 },
-        maxWidth: '56rem',
+        gap: { xs: 0.75, sm: 1 },
+        maxWidth: { xs: '100%', sm: '56rem' },
         mx: 'auto',
+        width: '100%',
+        boxSizing: 'border-box',
         position: 'relative',
         background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 247, 255, 0.95) 100%)',
         backdropFilter: 'blur(10px)',
         border: '1px solid',
         borderColor: 'divider',
         borderRadius: 2,
+        overflow: 'hidden',
       }}
     >
  

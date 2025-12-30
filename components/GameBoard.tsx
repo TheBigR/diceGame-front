@@ -202,7 +202,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </Dialog>
       )}
 
-      <Box sx={{ maxWidth: '56rem', mx: 'auto'}}>
+      <Box sx={{ maxWidth: { xs: '100%', sm: '56rem' }, mx: 'auto', width: '100%', boxSizing: 'border-box' }}>
 
       {/* Game Over Message */}
       {game.status === 'finished' && (
@@ -222,36 +222,55 @@ const GameBoard: React.FC<GameBoardProps> = ({
       )}
 
       {/* Player Scores */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 1 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: { xs: 1, sm: 2 }, mb: 1, width: '100%' }}>
         {/* Player 1 */}
         <Paper
           elevation={game.currentPlayerId === game.player1.id ? 4 : 1}
           sx={{
-            p: 3,
-            border: 2,
+            p: { xs: 1, sm: 3 },
+            border: { xs: 1, sm: 2 },
             borderColor: game.currentPlayerId === game.player1.id ? 'primary.main' : 'grey.300',
             bgcolor: game.currentPlayerId === game.player1.id ? 'primary.50' : 'background.paper',
             transition: 'all 0.3s',
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
+            overflow: 'hidden',
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+            <Typography 
+              variant="h6" 
+              component="h3" 
+              sx={{ 
+                fontWeight: 'bold', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                fontSize: { xs: '0.875rem', sm: '1.25rem' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: '1 1 auto',
+                minWidth: 0,
+              }}
+            >
               {game.player1.username}
               {aiName && game.player1.username === aiName && (
-                <Chip icon={<SmartToyIcon />} label="AI" size="small" color="secondary" />
+                <Chip icon={<SmartToyIcon />} label="AI" size="small" color="secondary" sx={{ flexShrink: 0 }} />
               )}
             </Typography>
             {game.currentPlayerId === game.player1.id && (
-              <Chip label="Your Turn" size="small" color="primary" />
+              <Chip label="Your Turn" size="small" color="primary" sx={{ flexShrink: 0, fontSize: { xs: '0.65rem', sm: '0.75rem' } }} />
             )}
           </Box>
-          <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.5 }}>
+          <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.5, fontSize: { xs: '2rem', sm: '3rem' } }}>
             {game.player1Score}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
             Round: <strong>{game.player1RoundScore}</strong>
           </Typography>
-          <Typography variant="caption" sx={{ color: 'text.disabled', mt: 0.5, display: 'block' }}>
+          <Typography variant="caption" sx={{ color: 'text.disabled', mt: 0.5, display: 'block', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
             Wins: {player1Wins}
           </Typography>
         </Paper>
@@ -260,50 +279,94 @@ const GameBoard: React.FC<GameBoardProps> = ({
         <Paper
           elevation={game.currentPlayerId === game.player2.id ? 4 : 1}
           sx={{
-            p: 3,
-            border: 2,
+            p: { xs: 1, sm: 3 },
+            border: { xs: 1, sm: 2 },
             borderColor: game.currentPlayerId === game.player2.id ? 'primary.main' : 'grey.300',
             bgcolor: game.currentPlayerId === game.player2.id ? 'primary.50' : 'background.paper',
             transition: 'all 0.3s',
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
+            overflow: 'hidden',
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+            <Typography 
+              variant="h6" 
+              component="h3" 
+              sx={{ 
+                fontWeight: 'bold', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                fontSize: { xs: '0.875rem', sm: '1.25rem' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: '1 1 auto',
+                minWidth: 0,
+              }}
+            >
               {game.player2.username}
               {aiName && game.player2.username === aiName && (
-                <Chip icon={<SmartToyIcon />} label="AI" size="small" color="secondary" />
+                <Chip icon={<SmartToyIcon />} label="AI" size="small" color="secondary" sx={{ flexShrink: 0 }} />
               )}
             </Typography>
             {game.currentPlayerId === game.player2.id && (
-              <Chip label="Your Turn" size="small" color="primary" />
+              <Chip label="Your Turn" size="small" color="primary" sx={{ flexShrink: 0, fontSize: { xs: '0.65rem', sm: '0.75rem' } }} />
             )}
           </Box>
-          <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.5 }}>
+          <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.5, fontSize: { xs: '2rem', sm: '3rem' } }}>
             {game.player2Score}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
             Round: <strong>{game.player2RoundScore}</strong>
           </Typography>
-          <Typography variant="caption" sx={{ color: 'text.disabled', mt: 0.5, display: 'block' }}>
+          <Typography variant="caption" sx={{ color: 'text.disabled', mt: 0.5, display: 'block', fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
             Wins: {player2Wins}
           </Typography>
         </Paper>
       </Box>
 
       {/* Dice Display */}
-      <Paper sx={{ bgcolor: 'grey.100', p: 4, mb: 1.5, textAlign: 'center', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <Paper sx={{ bgcolor: 'grey.100', p: { xs: 1.5, sm: 4 }, mb: 1.5, textAlign: 'center', minHeight: { xs: '150px', sm: '200px' }, display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3, mb: 2, minHeight: '120px' }}>
-          {lastRoll ? (
-            <>
-              <Dice value={lastRoll.die1} isRolling={diceRolling} size="lg" />
-              <Dice value={lastRoll.die2} isRolling={diceRolling} size="lg" />
-            </>
-          ) : (
-            <>
-              <Dice value={1} size="lg" />
-              <Dice value={1} size="lg" />
-            </>
-          )}
+          {(() => {
+            const canClick = Boolean(isMyTurn && game.status === 'active' && !isRolling && !isDoubleSix);
+            return lastRoll ? (
+              <>
+                <Dice 
+                  value={lastRoll.die1} 
+                  isRolling={diceRolling} 
+                  size="lg" 
+                  onClick={onRoll}
+                  clickable={canClick}
+                />
+                <Dice 
+                  value={lastRoll.die2} 
+                  isRolling={diceRolling} 
+                  size="lg" 
+                  onClick={onRoll}
+                  clickable={canClick}
+                />
+              </>
+            ) : (
+              <>
+                <Dice 
+                  value={1} 
+                  size="lg" 
+                  onClick={onRoll}
+                  clickable={canClick}
+                />
+                <Dice 
+                  value={1} 
+                  size="lg" 
+                  onClick={onRoll}
+                  clickable={canClick}
+                />
+              </>
+            );
+          })()}
         </Box>
         <Box sx={{ minHeight: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {lastRoll ? (
@@ -319,7 +382,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       </Paper>
 
       {/* Game Info */}
-      <Paper sx={{ bgcolor: 'grey.50', p: 2, mb: 3, textAlign: 'center' }}>
+      <Paper sx={{ bgcolor: 'grey.50', p: { xs: 1.5, sm: 2 }, mb: 3, textAlign: 'center', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
         <Typography variant="body1" sx={{ color: 'text.primary' }}>
           Winning Score: <strong>{game.winningScore}</strong>
         </Typography>
@@ -341,7 +404,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       </Paper>
 
       {/* Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', minHeight: '56px', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, justifyContent: 'center', flexWrap: 'wrap', minHeight: { xs: '50px', sm: '56px' }, alignItems: 'center', width: '100%' }}>
         {game.status === 'active' && isMyTurn && (
           <>
             <Button

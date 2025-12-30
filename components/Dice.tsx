@@ -6,9 +6,11 @@ interface DiceProps {
   value: number;
   isRolling?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  onClick?: () => void;
+  clickable?: boolean;
 }
 
-const Dice: React.FC<DiceProps> = ({ value, isRolling = false, size = 'md' }) => {
+const Dice: React.FC<DiceProps> = ({ value, isRolling = false, size = 'md', onClick, clickable = false }) => {
   const sizeClasses = {
     sm: 'w-12 h-12 text-2xl',
     md: 'w-16 h-16 text-3xl',
@@ -28,13 +30,16 @@ const Dice: React.FC<DiceProps> = ({ value, isRolling = false, size = 'md' }) =>
 
   return (
     <div
+      onClick={clickable && !isRolling ? onClick : undefined}
       className={`
         ${sizeClasses[size]}
         bg-white border-2 border-gray-800 rounded-lg shadow-lg
         flex items-center justify-center relative
         ${isRolling ? 'animate-spin' : ''}
         transition-transform duration-300
+        ${clickable && !isRolling ? 'cursor-pointer hover:scale-110 hover:shadow-xl active:scale-95' : ''}
       `}
+      style={clickable && !isRolling ? { userSelect: 'none' } : {}}
     >
       <div className="grid grid-cols-3 grid-rows-3 w-full h-full p-1">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((pos) => {
