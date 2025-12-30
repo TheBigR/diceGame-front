@@ -41,7 +41,7 @@ export default function NavBar({
     <Paper
       elevation={3}
       sx={{
-        mb: 0.1,
+        mb: 1,
         px: { xs: 1, sm: 3 },
         py: { xs: 0.5, sm: 0 },
         display: 'flex',

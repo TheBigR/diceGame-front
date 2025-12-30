@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, forwardRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef } from 'react';
 import { GameState, DiceRoll } from '@/types';
 import Dice from './Dice';
 import { storage } from '@/lib/storage';
@@ -25,7 +25,6 @@ interface GameBoardProps {
   onEndGame: () => Promise<void>;
   isRolling: boolean;
   lastRoll?: DiceRoll | null;
-  isDoubleSix: boolean;
   aiName?: string | null;
 }
 
@@ -40,11 +39,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
   onEndGame,
   isRolling,
   lastRoll,
-  isDoubleSix,
   aiName,
 }) => {
   const [showDoubleSixMessage, setShowDoubleSixMessage] = useState(false);
   const [diceRolling, setDiceRolling] = useState(false);
+  const [isDoubleSix, setIsDoubleSix] = useState(false);
+  const lastDoubleSixRollRef = useRef<string | null>(null);
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -54,30 +54,69 @@ const GameBoard: React.FC<GameBoardProps> = ({
     },
     ref: React.Ref<unknown>,
   ) {
-    return <Slide direction="up" ref={ref} {...props} />;
+    // Filter out Dialog-specific props that shouldn't be passed to Slide
+    const { 
+      closeAfterTransition, 
+      slotProps, 
+      slots, 
+      disableEscapeKeyDown,
+      disableBackdropClick,
+      disableScrollLock,
+      hideBackdrop,
+      onBackdropClick,
+      onClose,
+      open,
+      ...slideProps 
+    } = props as any;
+    return <Slide direction="up" ref={ref} {...slideProps} />;
   });
 
   const currentPlayer = game.currentPlayerId === game.player1.id ? game.player1 : game.player2;
   // Check if it's either Player 1's or Player 2's turn (for two human players on same machine)
   const isMyTurn = currentPlayer.userId === currentUserId || (player2UserId && currentPlayer.userId === player2UserId);
-  const isPlayer1 = game.player1.userId === currentUserId;
-  const myScore = isPlayer1 ? game.player1Score : game.player2Score;
-  const myRoundScore = isPlayer1 ? game.player1RoundScore : game.player2RoundScore;
-  const opponentScore = isPlayer1 ? game.player2Score : game.player1Score;
-  const opponentRoundScore = isPlayer1 ? game.player2RoundScore : game.player1RoundScore;
-  const opponent = isPlayer1 ? game.player2 : game.player1;
+  
 
+  // Check if the last roll was a double six and handle it - show modal for ANY double six
   useEffect(() => {
-    if (isDoubleSix) {
+    // Create a unique key for this roll to prevent showing modal multiple times for the same roll
+    const rollKey = lastRoll ? `${lastRoll.die1}-${lastRoll.die2}` : null;
+    
+    // Show modal if it's a double six and we haven't already shown it for this roll
+    if (lastRoll?.die1 === 6 && lastRoll?.die2 === 6 && lastDoubleSixRollRef.current !== rollKey && !isDoubleSix) {
+      console.log('[Double Six] Detected double six, showing modal', { rollKey, lastRoll });
+      // Mark this roll as handled
+      lastDoubleSixRollRef.current = rollKey;
+      // Set double six state, show modal, disable roll button
+      setIsDoubleSix(true);
       setShowDoubleSixMessage(true);
+      
+      // After 3 seconds: hide modal, set isDoubleSix to false, and end the turn (if it's the player's turn)
       const timer = setTimeout(() => {
+        console.log('[Double Six] Timer expired, closing modal');
         setShowDoubleSixMessage(false);
-      }, 3000);
+        setIsDoubleSix(false);
+        // End the turn by calling hold (which will switch turns) - only if it's the player's turn
+        if (isMyTurn) {
+          onHold();
+        }
+        // Reset ref after modal closes
+        lastDoubleSixRollRef.current = null;
+      }, 4500);
+      
       return () => clearTimeout(timer);
-    } else {
-      setShowDoubleSixMessage(false);
+    } else if (!lastRoll || (lastRoll && (lastRoll.die1 !== 6 || lastRoll.die2 !== 6))) {
+      // Reset if lastRoll is cleared or it's not a double six
+      if (isDoubleSix) {
+        console.log('[Double Six] Resetting double six state');
+        setIsDoubleSix(false);
+        setShowDoubleSixMessage(false);
+      }
+      // Reset ref when roll changes to non-double-six
+      if (lastRoll && (lastRoll.die1 !== 6 || lastRoll.die2 !== 6)) {
+        lastDoubleSixRollRef.current = null;
+      }
     }
-  }, [isDoubleSix]);
+  }, [lastRoll, isMyTurn, isDoubleSix, onHold]);
 
   useEffect(() => {
     if (isRolling) {
@@ -96,33 +135,50 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const player2Wins = storage.getWinCount(game.player2.userId);
 
   return (
-    <Box sx={{ maxWidth: '56rem', mx: 'auto', p: { xs: 2, sm: 3 } }}>
-      {/* Double Six Modal */}
-      <Dialog
-        open={showDoubleSixMessage}
-        onClose={() => setShowDoubleSixMessage(false)}
-        TransitionComponent={Transition}
-        maxWidth="sm"
-        fullWidth
-        slotProps={{
-          paper: {
-            sx: {
-              position: 'relative',
-              textAlign: 'center',
-              p: 3,
-              ...(fullScreen && {
-                m: 2,
-                mb: 0,
-                maxHeight: '60vh',
-                borderRadius: 2,
-              }),
+    <>
+      {/* Double Six Modal - only render when open to avoid layout issues */}
+      {showDoubleSixMessage && (
+        <Dialog
+          open={showDoubleSixMessage}
+          onClose={() => {
+            // Allow manual close - close dialog and reset state
+            setShowDoubleSixMessage(false);
+            setIsDoubleSix(false);
+            // If it's still the player's turn, end it
+            if (isMyTurn) {
+              onHold();
+            }
+          }}
+          TransitionComponent={Transition}
+          slotProps={{
+            paper: {
+              sx: {
+                position: 'relative',
+                textAlign: 'center',
+                p: 3,
+                ...(fullScreen && {
+                  m: 2,
+                  mb: 0,
+                  maxHeight: '60vh',
+                  borderRadius: 2,
+                }),
+              },
             },
-          },
-        }}
-      >
+          }}
+          maxWidth="sm"
+          fullWidth
+        >
         <IconButton
           aria-label="close"
-          onClick={() => setShowDoubleSixMessage(false)}
+          onClick={() => {
+            // Allow manual close
+            setShowDoubleSixMessage(false);
+            setIsDoubleSix(false);
+            // If it's still the player's turn, end it
+            if (isMyTurn) {
+              onHold();
+            }
+          }}
           sx={{
             position: 'absolute',
             left: 8,
@@ -141,9 +197,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
             <Typography variant="h6" sx={{ color: 'text.secondary' }}>
               Round score lost!
             </Typography>
-          </Box>
-        </DialogTitle>
-      </Dialog>
+            </Box>
+          </DialogTitle>
+        </Dialog>
+      )}
+
+      <Box sx={{ maxWidth: '56rem', mx: 'auto'}}>
 
       {/* Game Over Message */}
       {game.status === 'finished' && (
@@ -291,7 +350,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               size="medium"
               startIcon={isRolling ? <CircularProgress size={20} color="inherit" /> : <CasinoIcon />}
               onClick={onRoll}
-              disabled={isRolling || showDoubleSixMessage}
+              disabled={isRolling || isDoubleSix}
               sx={{ minWidth: '140px', textTransform: 'none' }}
             >
               {isRolling ? 'Rolling...' : 'Roll Dice'}
@@ -302,7 +361,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               size="medium"
               startIcon={<SaveIcon />}
               onClick={onHold}
-              disabled={isRolling || showDoubleSixMessage}
+              disabled={isRolling || isDoubleSix}
               sx={{ minWidth: '140px', textTransform: 'none' }}
             >
               End Turn
@@ -341,10 +400,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
             >
               Abandon Game
             </Button>
-          </>
+          </> 
         )}
       </Box>
-    </Box>
+      </Box>
+    </>
   );
 };
 

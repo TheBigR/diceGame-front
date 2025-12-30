@@ -20,7 +20,6 @@ interface GameViewProps {
   onEndGame: () => Promise<void>;
   isRolling: boolean;
   lastRoll: DiceRoll | null;
-  isDoubleSix: boolean;
   aiName?: string;
   abandonDialogOpen: boolean;
   onAbandonGameCancel: () => void;
@@ -42,7 +41,6 @@ export default function GameView({
   onEndGame,
   isRolling,
   lastRoll,
-  isDoubleSix,
   aiName,
   abandonDialogOpen,
   onAbandonGameCancel,
@@ -52,9 +50,11 @@ export default function GameView({
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        height: '100vh',
         background: 'linear-gradient(to bottom right, #eff6ff, #eef2ff)',
-        p: { xs: 2, sm: 4 },
+        px: { xs: 2, sm: 4 },
+        pt: { xs: 2, sm: 4 },
+        pb: { xs: 2, sm: 4 },
       }}
     >
       <NavBar
@@ -65,7 +65,7 @@ export default function GameView({
       />
 
       {error && (
-        <Box sx={{ maxWidth: '56rem', mx: 'auto', mb: 0.1 }}>
+        <Box sx={{ maxWidth: '56rem', mx: 'auto', mb: 0.1, mt: 2 ,}}>
           <Alert severity="error">{error}</Alert>
         </Box>
       )}
@@ -81,7 +81,6 @@ export default function GameView({
         onEndGame={onEndGame}
         isRolling={isRolling}
         lastRoll={lastRoll}
-        isDoubleSix={isDoubleSix}
         aiName={aiName}
       />
 

@@ -14,10 +14,8 @@ interface UseAIPlayerProps {
   game: GameState | null;
   currentUserId: string;
   isRolling: boolean;
-  isDoubleSix: boolean;
   onGameUpdate: (game: GameState) => void;
   onLastRollUpdate: (roll: DiceRoll | null) => void;
-  onDoubleSixUpdate: (value: boolean) => void;
   onRollingUpdate: (value: boolean) => void;
 }
 
@@ -25,10 +23,8 @@ export function useAIPlayer({
   game,
   currentUserId,
   isRolling,
-  isDoubleSix,
   onGameUpdate,
   onLastRollUpdate,
-  onDoubleSixUpdate,
   onRollingUpdate,
 }: UseAIPlayerProps) {
   const [aiUser, setAiUser] = useState<AIUser | null>(null);
@@ -89,10 +85,8 @@ export function useAIPlayer({
       return;
     }
     
-    // Wait for double six message to clear before continuing
-    if (isDoubleSix) {
-      return;
-    }
+    // Double six handling is now done in the component
+    // No need to wait here - AI can continue playing
 
     const currentPlayer = game.currentPlayerId === game.player1.id ? game.player1 : game.player2;
     // Check if it's AI's turn by comparing userId or username (fallback)
@@ -144,7 +138,6 @@ export function useAIPlayer({
             const response = await apiClient.hold(gameId, aiUser.token);
             onGameUpdate(response.gameState);
             onLastRollUpdate(null);
-            onDoubleSixUpdate(false);
             
             if (response.isGameOver && response.winnerId) {
               storage.incrementWin(response.winnerId);
@@ -167,7 +160,6 @@ export function useAIPlayer({
             const response = await apiClient.rollDice(gameId, aiUser.token);
             onGameUpdate(response.gameState);
             onLastRollUpdate(response.dice);
-            onDoubleSixUpdate(response.isDoubleSix);
             
             if (response.isDoubleSix) {
               soundManager.playDoubleSix();
@@ -209,7 +201,7 @@ export function useAIPlayer({
     } else if (!isAITurn) {
       lastProcessedGameStateRef.current = null;
     }
-  }, [game?.currentPlayerId, game?.updatedAt, game?.status, game?.id, aiUser, isDoubleSix, onGameUpdate, onLastRollUpdate, onDoubleSixUpdate, onRollingUpdate]);
+  }, [game?.currentPlayerId, game?.updatedAt, game?.status, game?.id, aiUser, onGameUpdate, onLastRollUpdate, onRollingUpdate]);
 
   // Check if a game has an AI opponent by checking if any player username matches AI name patterns
   const isAIGame = (gameState: GameState | null): boolean => {

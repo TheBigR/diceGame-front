@@ -27,7 +27,6 @@ export function useGameActions({
 }: UseGameActionsProps) {
   const [isRolling, setIsRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState<DiceRoll | null>(null);
-  const [isDoubleSix, setIsDoubleSix] = useState(false);
   const [error, setError] = useState('');
 
   const handleRoll = useCallback(async () => {
@@ -74,15 +73,10 @@ export function useGameActions({
       const response = await apiClient.rollDice(currentGameState.id, tokenToUse);
       onGameUpdate(response.gameState);
       setLastRoll(response.dice);
-      setIsDoubleSix(response.isDoubleSix);
 
       if (response.isDoubleSix) {
         soundManager.playDoubleSix();
-        // Clear the last roll after a delay so the message is visible
-        setTimeout(() => {
-          setLastRoll(null);
-          setIsDoubleSix(false);
-        }, 3000);
+        // Don't clear lastRoll here - let the component handle it after showing the dialog
       }
 
       // Track win if game is over (but double six should NOT end the game)
@@ -143,7 +137,6 @@ export function useGameActions({
       const response = await apiClient.hold(currentGameState.id, tokenToUse);
       onGameUpdate(response.gameState);
       setLastRoll(null);
-      setIsDoubleSix(false);
 
       // Track win if game is over
       if (response.isGameOver && response.winnerId) {
@@ -166,7 +159,6 @@ export function useGameActions({
       const newGameState = await apiClient.newGame(game.id);
       onGameUpdate(newGameState);
       setLastRoll(null);
-      setIsDoubleSix(false);
       
       // If the original game had an AI opponent, restore AI for the new game
       if (wasAIGame && restoreAIForGame) {
@@ -269,14 +261,12 @@ export function useGameActions({
 
   const clearGameState = useCallback(() => {
     setLastRoll(null);
-    setIsDoubleSix(false);
     setError('');
   }, []);
 
   return {
     isRolling,
     lastRoll,
-    isDoubleSix,
     error,
     setError,
     handleRoll,
@@ -285,7 +275,6 @@ export function useGameActions({
     handleEndGame,
     clearGameState,
     setLastRoll,
-    setIsDoubleSix,
   };
 }
 

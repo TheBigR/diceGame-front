@@ -25,7 +25,6 @@ export default function GamePage() {
   const {
     isRolling,
     lastRoll,
-    isDoubleSix,
     error: actionsError,
     setError: setActionsError,
     handleRoll,
@@ -34,7 +33,6 @@ export default function GamePage() {
     handleEndGame,
     clearGameState,
     setLastRoll,
-    setIsDoubleSix,
   } = useGameActions({
     game,
     onGameUpdate: setGame,
@@ -51,10 +49,8 @@ export default function GamePage() {
     game,
     currentUserId: user?.id || '',
     isRolling,
-    isDoubleSix,
     onGameUpdate: setGame,
     onLastRollUpdate: setLastRoll,
-    onDoubleSixUpdate: setIsDoubleSix,
     onRollingUpdate: () => {}, // Not used, managed in game actions hook
   });
 
@@ -224,7 +220,6 @@ export default function GamePage() {
       onEndGame={finalHandleEndGame}
       isRolling={isRolling}
       lastRoll={lastRoll}
-      isDoubleSix={isDoubleSix}
       aiName={aiName || undefined}
       abandonDialogOpen={abandonDialogOpen}
       onAbandonGameCancel={handleAbandonGameCancel}
