@@ -24,10 +24,13 @@ export default function CreateGameForm({
   const [winningScore, setWinningScore] = useState(100);
   const [opponentType, setOpponentType] = useState<'human' | 'ai'>('human');
   const [showPlayer2Auth, setShowPlayer2Auth] = useState(false);
+  const [error, setError] = useState('');
   const { user: player2User, logout: player2Logout } = usePlayer2Auth();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(''); // Clear any previous errors
+    
     const isAI = opponentType === 'ai';
     
     if (isAI) {
@@ -41,6 +44,12 @@ export default function CreateGameForm({
       return;
     }
 
+    // Prevent user from playing against themselves
+    if (player1 === player2User.username) {
+      setError('You cannot play against yourself. Please authenticate as a different player.');
+      return;
+    }
+
     if (player1 && player2User.username) {
       onCreateGame(player1, player2User.username, winningScore, false);
     }
@@ -49,6 +58,11 @@ export default function CreateGameForm({
   const handlePlayer2AuthSuccess = (username: string) => {
     setPlayer2(username);
     setShowPlayer2Auth(false);
+    setError(''); // Clear error when player2 authenticates
+    // Check if player2 is the same as player1
+    if (player1 === username) {
+      setError('You cannot play against yourself. Please authenticate as a different player.');
+    }
   };
 
   const handlePlayer2AuthCancel = () => {
@@ -104,25 +118,47 @@ export default function CreateGameForm({
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {player2User ? (
               <Box>
-                <Alert 
-                  severity="success" 
-                  sx={{ mb: 1 }}
-                  action={
-                    <IconButton
-                      aria-label="logout player 2"
-                      color="inherit"
-                      size="small"
-                      onClick={() => {
-                        player2Logout();
-                        setPlayer2('');
-                      }}
-                    >
-                      <LogoutIcon fontSize="small" />
-                    </IconButton>
-                  }
-                >
-                  Player 2 authenticated as: <strong>{player2User.username}</strong>
-                </Alert>
+                {player1 === player2User.username ? (
+                  <Alert 
+                    severity="error" 
+                    sx={{ mb: 1 }}
+                    action={
+                      <IconButton
+                        aria-label="logout player 2"
+                        color="inherit"
+                        size="small"
+                        onClick={() => {
+                          player2Logout();
+                          setPlayer2('');
+                        }}
+                      >
+                        <LogoutIcon fontSize="small" />
+                      </IconButton>
+                    }
+                  >
+                    Player 2 and Player 1 cannot match. Please authenticate as a different player.
+                  </Alert>
+                ) : (
+                  <Alert 
+                    severity="success" 
+                    sx={{ mb: 1 }}
+                    action={
+                      <IconButton
+                        aria-label="logout player 2"
+                        color="inherit"
+                        size="small"
+                        onClick={() => {
+                          player2Logout();
+                          setPlayer2('');
+                        }}
+                      >
+                        <LogoutIcon fontSize="small" />
+                      </IconButton>
+                    }
+                  >
+                    Player 2 authenticated as: <strong>{player2User.username}</strong>
+                  </Alert>
+                )}
                 <Button
                   variant="outlined"
                   size="small"
@@ -167,11 +203,17 @@ export default function CreateGameForm({
         required
         fullWidth
       />
+      {error && (
+        <Alert severity="error" sx={{ mt: 1 }}>
+          {error}
+        </Alert>
+      )}
       <Button
         type="submit"
         variant="contained"
         fullWidth
         sx={{ py: 1.5, fontWeight: 'semibold', textTransform: 'none' }}
+        disabled={opponentType === 'human' && player2User && player1 === player2User.username}
       >
         Create Game
       </Button>
