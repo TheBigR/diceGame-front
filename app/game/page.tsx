@@ -43,6 +43,7 @@ export default function GamePage() {
     aiUser: undefined, // Will be set after AI hook
     currentUserId: user?.id || '',
     player2Token: player2Token,
+    player2UserId: player2User?.id || null,
   });
 
   // AI Player hook - needs game actions state
@@ -66,6 +67,7 @@ export default function GamePage() {
     aiUser,
     currentUserId: user?.id || '',
     player2Token: player2Token,
+    player2UserId: player2User?.id || null,
   });
 
   // Use the game actions with AI support
@@ -104,23 +106,6 @@ export default function GamePage() {
       router.push('/');
     }
   }, [user, authLoading, router]);
-
-  // Periodically refresh game state from backend to ensure we have the latest turn information
-  useEffect(() => {
-    if (!game || game.status !== 'active' || viewMode !== 'game') return;
-
-    const refreshInterval = setInterval(async () => {
-      try {
-        const { apiClient } = await import('@/lib/api');
-        const refreshedGame = await apiClient.getGameState(game.id);
-        setGame(refreshedGame);
-      } catch (err) {
-        console.warn('Failed to refresh game state:', err);
-      }
-    }, 2000); // Refresh every 2 seconds
-
-    return () => clearInterval(refreshInterval);
-  }, [game, viewMode]);
 
 
   const handleAbandonGameClick = async () => {

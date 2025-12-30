@@ -12,6 +12,7 @@ interface UseGameActionsProps {
   aiUser?: any;
   currentUserId?: string;
   player2Token?: string | null;
+  player2UserId?: string | null;
 }
 
 export function useGameActions({
@@ -22,6 +23,7 @@ export function useGameActions({
   aiUser,
   currentUserId,
   player2Token,
+  player2UserId,
 }: UseGameActionsProps) {
   const [isRolling, setIsRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState<DiceRoll | null>(null);
@@ -34,14 +36,42 @@ export function useGameActions({
     try {
       setIsRolling(true);
       setError('');
+      
+      // Refresh game state from backend to ensure we have the latest turn information
+      let currentGameState = game;
+      try {
+        const refreshedGame = await apiClient.getGameState(game.id);
+        currentGameState = refreshedGame;
+        onGameUpdate(refreshedGame);
+        // Check if it's still the player's turn after refresh
+        const refreshedCurrentPlayer = refreshedGame.currentPlayerId === refreshedGame.player1.id 
+          ? refreshedGame.player1 
+          : refreshedGame.player2;
+        const isStillMyTurn = refreshedCurrentPlayer.userId === currentUserId || 
+          (player2UserId && refreshedCurrentPlayer.userId === player2UserId);
+        if (!isStillMyTurn) {
+          setError('It is not your turn');
+          setIsRolling(false);
+          return;
+        }
+      } catch (refreshError: any) {
+        console.error('Failed to refresh game state before roll:', refreshError);
+        setError('Failed to refresh game state. Please try again.');
+        setIsRolling(false);
+        return;
+      }
+      
       soundManager.playRoll();
       
-      // Determine which token to use based on current player
-      const currentPlayer = game.currentPlayerId === game.player1.id ? game.player1 : game.player2;
+      // Determine which token to use based on current player (use refreshed state)
+      const currentPlayer = currentGameState.currentPlayerId === currentGameState.player1.id 
+        ? currentGameState.player1 
+        : currentGameState.player2;
       const isPlayer2Turn = currentPlayer.userId !== currentUserId;
       const tokenToUse = isPlayer2Turn && player2Token ? player2Token : undefined;
       
-      const response = await apiClient.rollDice(game.id, tokenToUse);
+      console.log(`[Roll] Using token for player: ${isPlayer2Turn ? 'Player 2' : 'Player 1'}, currentPlayerId: ${currentGameState.currentPlayerId}`);
+      const response = await apiClient.rollDice(currentGameState.id, tokenToUse);
       onGameUpdate(response.gameState);
       setLastRoll(response.dice);
       setIsDoubleSix(response.isDoubleSix);
@@ -64,25 +94,53 @@ export function useGameActions({
         soundManager.playWin();
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to roll dice');
+      const errorMessage = err.message || 'Failed to roll dice';
+      console.error('Roll dice error:', err);
+      setError(errorMessage);
     } finally {
       setIsRolling(false);
     }
-  }, [game, isRolling, onGameUpdate, currentUserId, player2Token]);
+  }, [game, isRolling, onGameUpdate, currentUserId, player2Token, player2UserId]);
 
   const handleHold = useCallback(async () => {
     if (!game) return;
 
     try {
       setError('');
+      
+      // Refresh game state from backend to ensure we have the latest turn information
+      let currentGameState = game;
+      try {
+        const refreshedGame = await apiClient.getGameState(game.id);
+        currentGameState = refreshedGame;
+        onGameUpdate(refreshedGame);
+        // Check if it's still the player's turn after refresh
+        const refreshedCurrentPlayer = refreshedGame.currentPlayerId === refreshedGame.player1.id 
+          ? refreshedGame.player1 
+          : refreshedGame.player2;
+        const isStillMyTurn = refreshedCurrentPlayer.userId === currentUserId || 
+          (player2UserId && refreshedCurrentPlayer.userId === player2UserId);
+        if (!isStillMyTurn) {
+          setError('It is not your turn');
+          return;
+        }
+      } catch (refreshError: any) {
+        console.error('Failed to refresh game state before hold:', refreshError);
+        setError('Failed to refresh game state. Please try again.');
+        return;
+      }
+      
       soundManager.playHold();
       
-      // Determine which token to use based on current player
-      const currentPlayer = game.currentPlayerId === game.player1.id ? game.player1 : game.player2;
+      // Determine which token to use based on current player (use refreshed state)
+      const currentPlayer = currentGameState.currentPlayerId === currentGameState.player1.id 
+        ? currentGameState.player1 
+        : currentGameState.player2;
       const isPlayer2Turn = currentPlayer.userId !== currentUserId;
       const tokenToUse = isPlayer2Turn && player2Token ? player2Token : undefined;
       
-      const response = await apiClient.hold(game.id, tokenToUse);
+      console.log(`[Hold] Using token for player: ${isPlayer2Turn ? 'Player 2' : 'Player 1'}, currentPlayerId: ${currentGameState.currentPlayerId}`);
+      const response = await apiClient.hold(currentGameState.id, tokenToUse);
       onGameUpdate(response.gameState);
       setLastRoll(null);
       setIsDoubleSix(false);
@@ -93,9 +151,11 @@ export function useGameActions({
         soundManager.playWin();
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to hold');
+      const errorMessage = err.message || 'Failed to hold';
+      console.error('Hold error:', err);
+      setError(errorMessage);
     }
-  }, [game, onGameUpdate, currentUserId, player2Token]);
+  }, [game, onGameUpdate, currentUserId, player2Token, player2UserId]);
 
   const handleNewGame = useCallback(async () => {
     if (!game) return;
@@ -128,14 +188,25 @@ export function useGameActions({
     try {
       setError('');
       
-      // First, end the current turn by holding (if there's a round score to add)
+      // Refresh game state from backend to ensure we have the latest information
       let finalGameState = game;
+      try {
+        const refreshedGame = await apiClient.getGameState(game.id);
+        finalGameState = refreshedGame;
+        onGameUpdate(refreshedGame);
+      } catch (refreshError) {
+        console.warn('Failed to refresh game state before end game:', refreshError);
+        // Continue with current state
+      }
       
+      // First, end the current turn by holding (if there's a round score to add)
       // Check if current player has a round score that needs to be added
-      const currentPlayer = game.currentPlayerId === game.player1.id ? game.player1 : game.player2;
-      const currentRoundScore = game.currentPlayerId === game.player1.id 
-        ? game.player1RoundScore 
-        : game.player2RoundScore;
+      const currentPlayer = finalGameState.currentPlayerId === finalGameState.player1.id 
+        ? finalGameState.player1 
+        : finalGameState.player2;
+      const currentRoundScore = finalGameState.currentPlayerId === finalGameState.player1.id 
+        ? finalGameState.player1RoundScore 
+        : finalGameState.player2RoundScore;
       
       // If there's a round score, hold first to add it to the total
       if (currentRoundScore > 0) {
@@ -144,7 +215,7 @@ export function useGameActions({
           const isPlayer2Turn = currentPlayer.userId !== currentUserId;
           const tokenToUse = isPlayer2Turn && player2Token ? player2Token : undefined;
           
-          const holdResponse = await apiClient.hold(game.id, tokenToUse);
+          const holdResponse = await apiClient.hold(finalGameState.id, tokenToUse);
           finalGameState = holdResponse.gameState;
           onGameUpdate(finalGameState);
           
@@ -155,9 +226,19 @@ export function useGameActions({
             return; // Game already ended, no need to call endGame
           }
         } catch (holdError: any) {
-          console.warn('Failed to hold before ending game:', holdError);
+          console.error('Failed to hold before ending game:', holdError);
           // Continue with ending game even if hold fails
         }
+      }
+      
+      // Refresh game state again after hold (if it happened) to get latest state
+      try {
+        const refreshedAfterHold = await apiClient.getGameState(finalGameState.id);
+        finalGameState = refreshedAfterHold;
+        onGameUpdate(refreshedAfterHold);
+      } catch (refreshError) {
+        console.warn('Failed to refresh game state after hold:', refreshError);
+        // Continue with current state
       }
       
       // Now end the game - backend will determine the winner
@@ -180,9 +261,11 @@ export function useGameActions({
         soundManager.playWin();
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to end game');
+      const errorMessage = err.message || 'Failed to end game';
+      console.error('End game error:', err);
+      setError(errorMessage);
     }
-  }, [game, onGameUpdate, currentUserId, player2Token]);
+  }, [game, onGameUpdate, currentUserId, player2Token, player2UserId]);
 
   const clearGameState = useCallback(() => {
     setLastRoll(null);

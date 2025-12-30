@@ -56,13 +56,16 @@ class ApiClient {
           try {
             const error = JSON.parse(text);
             errorMessage = error.error || error.message || errorMessage;
+            console.error(`[API] Error response:`, error);
           } catch {
             // Not JSON, use the text as error message
             errorMessage = text || errorMessage;
+            console.error(`[API] Error response (text):`, text);
           }
         }
       } catch {
         // If we can't read the response, use the status-based message
+        console.error(`[API] Failed to read error response`);
       }
       throw new Error(errorMessage);
     }
