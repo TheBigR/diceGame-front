@@ -198,6 +198,24 @@ export function useGameActions({
         // Continue with current state
       }
       
+      // Check if Player 2 hasn't played yet (only for human vs human games, not AI)
+      // If Player 2 has score 0 and round score 0, and it's Player 1's turn, treat as abandon
+      const isPlayer1Turn = finalGameState.currentPlayerId === finalGameState.player1.id;
+      const player2HasNotPlayed = finalGameState.player2Score === 0 && finalGameState.player2RoundScore === 0;
+      
+      // Check if it's a human vs human game (not AI)
+      const aiNamePatterns = ['Shadow', 'Neon', 'Cyber', 'Quantum', 'Nova', 'Vortex', 'Phantom', 'Echo', 'Blaze', 'Storm', 'Frost', 'Thunder', 'Cosmic', 'Astral', 'Mystic', 'Razor', 'Swift', 'Iron', 'Steel', 'Crystal'];
+      const isAIGame = aiNamePatterns.some(pattern => 
+        finalGameState.player2.username.startsWith(pattern)
+      );
+      
+      // If Player 2 hasn't played and it's a human game, treat as abandon
+      if (!isAIGame && player2HasNotPlayed && isPlayer1Turn) {
+        console.log('Player 2 has not played yet - treating End Game as Abandon Game');
+        // Throw a special error that will be caught and handled as abandon
+        throw new Error('ABANDON_GAME');
+      }
+      
       // First, end the current turn by holding (if there's a round score to add)
       // Check if current player has a round score that needs to be added
       const currentPlayer = finalGameState.currentPlayerId === finalGameState.player1.id 
@@ -264,6 +282,10 @@ export function useGameActions({
         // Don't increment wins for either player in a tie
       }
     } catch (err: any) {
+      // If this is an abandon game error, re-throw it so it can be handled as abandon
+      if (err.message === 'ABANDON_GAME') {
+        throw err;
+      }
       const errorMessage = err.message || 'Failed to end game';
       console.error('End game error:', err);
       setError(errorMessage);

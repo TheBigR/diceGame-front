@@ -76,7 +76,19 @@ export default function GamePage() {
 
   // Use the game actions with AI support
   const finalHandleNewGame = gameActionsWithAI.handleNewGame;
-  const finalHandleEndGame = gameActionsWithAI.handleEndGame;
+  const finalHandleEndGame = async () => {
+    try {
+      await gameActionsWithAI.handleEndGame();
+    } catch (err: any) {
+      // If Player 2 hasn't played yet, treat as abandon game
+      if (err.message === 'ABANDON_GAME') {
+        handleAbandonGameClick();
+      } else {
+        // Re-throw other errors
+        throw err;
+      }
+    }
+  };
 
   // Game Management hook
   const {
