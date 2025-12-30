@@ -17,6 +17,7 @@ interface UseAIPlayerProps {
   onGameUpdate: (game: GameState) => void;
   onLastRollUpdate: (roll: DiceRoll | null) => void;
   onRollingUpdate: (value: boolean) => void;
+  onAIDoubleSix?: () => void;
 }
 
 export function useAIPlayer({
@@ -26,6 +27,7 @@ export function useAIPlayer({
   onGameUpdate,
   onLastRollUpdate,
   onRollingUpdate,
+  onAIDoubleSix,
 }: UseAIPlayerProps) {
   const [aiUser, setAiUser] = useState<AIUser | null>(null);
   const aiProcessingRef = useRef(false);
@@ -163,6 +165,9 @@ export function useAIPlayer({
             
             if (response.isDoubleSix) {
               soundManager.playDoubleSix();
+              // Notify that AI rolled double six - call this BEFORE updating game state
+              // so GameBoard can set the flag before the modal logic runs
+              onAIDoubleSix?.();
               // Double six - turn switches, refresh game state from backend
               try {
                 const refreshedState = await apiClient.getGameState(gameId);
@@ -173,6 +178,7 @@ export function useAIPlayer({
               // Reset flags
               aiProcessingRef.current = false;
               lastProcessedGameStateRef.current = null;
+              // Don't clear lastRoll here - let GameBoard handle it after showing the modal
             } else {
               // Still AI's turn - reset flags so it can continue rolling
               aiProcessingRef.current = false;
@@ -201,7 +207,7 @@ export function useAIPlayer({
     } else if (!isAITurn) {
       lastProcessedGameStateRef.current = null;
     }
-  }, [game?.currentPlayerId, game?.updatedAt, game?.status, game?.id, aiUser, onGameUpdate, onLastRollUpdate, onRollingUpdate]);
+  }, [game?.currentPlayerId, game?.updatedAt, game?.status, game?.id, aiUser, onGameUpdate, onLastRollUpdate, onRollingUpdate, onAIDoubleSix]);
 
   // Check if a game has an AI opponent by checking if any player username matches AI name patterns
   const isAIGame = (gameState: GameState | null): boolean => {

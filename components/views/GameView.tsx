@@ -24,6 +24,7 @@ interface GameViewProps {
   abandonDialogOpen: boolean;
   onAbandonGameCancel: () => void;
   onAbandonGameConfirm: () => void;
+  onAIDoubleSixRef?: React.MutableRefObject<{ setFlag: () => void } | null>;
   error?: string;
 }
 
@@ -45,6 +46,7 @@ export default function GameView({
   abandonDialogOpen,
   onAbandonGameCancel,
   onAbandonGameConfirm,
+  onAIDoubleSixRef,
   error,
 }: GameViewProps) {
   return (
@@ -85,6 +87,7 @@ export default function GameView({
         isRolling={isRolling}
         lastRoll={lastRoll}
         aiName={aiName}
+        onAIDoubleSixRef={onAIDoubleSixRef}
       />
 
       <AbandonGameDialog

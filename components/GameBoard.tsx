@@ -26,6 +26,7 @@ interface GameBoardProps {
   isRolling: boolean;
   lastRoll?: DiceRoll | null;
   aiName?: string | null;
+  onAIDoubleSixRef?: React.MutableRefObject<{ setFlag: () => void } | null>;
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({
@@ -40,11 +41,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
   isRolling,
   lastRoll,
   aiName,
+  onAIDoubleSixRef,
 }) => {
   const [showDoubleSixMessage, setShowDoubleSixMessage] = useState(false);
   const [diceRolling, setDiceRolling] = useState(false);
   const [isDoubleSix, setIsDoubleSix] = useState(false);
   const lastDoubleSixRollRef = useRef<string | null>(null);
+  const isAIDoubleSixRef = useRef<boolean>(false);
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -76,6 +79,23 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const isMyTurn = currentPlayer.userId === currentUserId || (player2UserId && currentPlayer.userId === player2UserId);
   
 
+  // Expose method to set AI double six flag via ref
+  useEffect(() => {
+    if (onAIDoubleSixRef) {
+      onAIDoubleSixRef.current = {
+        setFlag: () => {
+          console.log('[GameBoard] AI double six flag set via ref');
+          isAIDoubleSixRef.current = true;
+        },
+      };
+    }
+    return () => {
+      if (onAIDoubleSixRef) {
+        onAIDoubleSixRef.current = null;
+      }
+    };
+  }, [onAIDoubleSixRef]);
+
   // Check if the last roll was a double six and handle it - show modal for ANY double six
   useEffect(() => {
     // Create a unique key for this roll to prevent showing modal multiple times for the same roll
@@ -83,27 +103,42 @@ const GameBoard: React.FC<GameBoardProps> = ({
     
     // Show modal if it's a double six and we haven't already shown it for this roll
     if (lastRoll?.die1 === 6 && lastRoll?.die2 === 6 && lastDoubleSixRollRef.current !== rollKey && !isDoubleSix) {
-      console.log('[Double Six] Detected double six, showing modal', { rollKey, lastRoll });
+      console.log('[Double Six] Detected double six, showing modal', { rollKey, lastRoll, isAIDoubleSix: isAIDoubleSixRef.current });
       // Mark this roll as handled
       lastDoubleSixRollRef.current = rollKey;
       // Set double six state, show modal, disable roll button
       setIsDoubleSix(true);
       setShowDoubleSixMessage(true);
       
-      // After 3 seconds: hide modal, set isDoubleSix to false, and end the turn (if it's the player's turn)
+      // Check if it was an AI double six (set via ref callback) - capture it immediately
+      const wasAIDoubleSix = isAIDoubleSixRef.current;
+      // Capture isMyTurn at the time of detection (before backend switches turn)
+      const wasMyTurnAtDetection = isMyTurn;
+      console.log('[Double Six] Setting up timer', { wasAIDoubleSix, wasMyTurnAtDetection, rollKey });
+      
+      // After 3 seconds: hide modal, set isDoubleSix to false
+      // Only call onHold() if it was the PLAYER who rolled it (not AI - backend already switched turn for AI)
       const timer = setTimeout(() => {
-        console.log('[Double Six] Timer expired, closing modal');
+        console.log('[Double Six] Timer expired, closing modal', { wasAIDoubleSix, wasMyTurnAtDetection });
         setShowDoubleSixMessage(false);
         setIsDoubleSix(false);
-        // End the turn by calling hold (which will switch turns) - only if it's the player's turn
-        if (isMyTurn) {
+        // Only end the turn if the PLAYER rolled it (not AI)
+        // For AI double six, backend already switched turn, so don't call onHold()
+        if (!wasAIDoubleSix && wasMyTurnAtDetection) {
+          console.log('[Double Six] Player rolled it, calling onHold()');
           onHold();
+        } else {
+          console.log('[Double Six] AI rolled it or not my turn, skipping onHold()');
         }
-        // Reset ref after modal closes
-        lastDoubleSixRollRef.current = null;
+        // Don't reset lastDoubleSixRollRef here - keep it to prevent modal from showing again
+        // It will be reset when lastRoll changes to a non-double-six
+        // Reset AI flag for next time
+        isAIDoubleSixRef.current = false;
       }, 4500);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+      };
     } else if (!lastRoll || (lastRoll && (lastRoll.die1 !== 6 || lastRoll.die2 !== 6))) {
       // Reset if lastRoll is cleared or it's not a double six
       if (isDoubleSix) {
@@ -111,12 +146,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
         setIsDoubleSix(false);
         setShowDoubleSixMessage(false);
       }
-      // Reset ref when roll changes to non-double-six
+      // Reset refs when roll changes to non-double-six
       if (lastRoll && (lastRoll.die1 !== 6 || lastRoll.die2 !== 6)) {
         lastDoubleSixRollRef.current = null;
+        isAIDoubleSixRef.current = false;
       }
     }
-  }, [lastRoll, isMyTurn, isDoubleSix, onHold]);
+  }, [lastRoll, isDoubleSix, onHold]);
 
   useEffect(() => {
     if (isRolling) {
@@ -172,12 +208,22 @@ const GameBoard: React.FC<GameBoardProps> = ({
           aria-label="close"
           onClick={() => {
             // Allow manual close
+            const wasAIDoubleSix = isAIDoubleSixRef.current;
+            console.log('[Double Six] Manual close', { wasAIDoubleSix, isMyTurn });
             setShowDoubleSixMessage(false);
             setIsDoubleSix(false);
-            // If it's still the player's turn, end it
-            if (isMyTurn) {
+            // Only end the turn if the PLAYER rolled it (not AI)
+            // For AI double six, backend already switched turn, so don't call onHold()
+            if (!wasAIDoubleSix && isMyTurn) {
+              console.log('[Double Six] Manual close - Player rolled it, calling onHold()');
               onHold();
+            } else {
+              console.log('[Double Six] Manual close - AI rolled it or not my turn, skipping onHold()');
             }
+            // Don't reset lastDoubleSixRollRef - keep it to prevent modal from showing again for this roll
+            // It will be reset when lastRoll changes to a non-double-six
+            // Reset AI flag for next time
+            isAIDoubleSixRef.current = false;
           }}
           sx={{
             position: 'absolute',

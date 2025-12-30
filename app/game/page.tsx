@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayer2Auth } from '@/contexts/Player2AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { GameState } from '@/types';
 import { useAIPlayer } from '@/hooks/useAIPlayer';
 import { useGameActions } from '@/hooks/useGameActions';
@@ -45,6 +45,9 @@ export default function GamePage() {
   });
 
   // AI Player hook - needs game actions state
+  // We'll pass a callback to GameBoard to notify it when AI rolls double six
+  const aiDoubleSixRef = useRef<{ setFlag: () => void } | null>(null);
+
   const { aiUser, registerAI, clearAI, aiName, isAIGame, restoreAIForGame } = useAIPlayer({
     game,
     currentUserId: user?.id || '',
@@ -52,6 +55,11 @@ export default function GamePage() {
     onGameUpdate: setGame,
     onLastRollUpdate: setLastRoll,
     onRollingUpdate: () => {}, // Not used, managed in game actions hook
+    onAIDoubleSix: () => {
+      console.log('[GamePage] AI rolled double six - notifying GameBoard');
+      // Notify GameBoard via ref
+      aiDoubleSixRef.current?.setFlag();
+    },
   });
 
   // Re-create game actions with AI functions now available
@@ -224,6 +232,7 @@ export default function GamePage() {
       abandonDialogOpen={abandonDialogOpen}
       onAbandonGameCancel={handleAbandonGameCancel}
       onAbandonGameConfirm={handleAbandonGameConfirm}
+      onAIDoubleSixRef={aiDoubleSixRef}
       error={error}
     />
   );
