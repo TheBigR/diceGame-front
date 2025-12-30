@@ -112,24 +112,18 @@ const GameBoard: React.FC<GameBoardProps> = ({
       
       // Check if it was an AI double six (set via ref callback) - capture it immediately
       const wasAIDoubleSix = isAIDoubleSixRef.current;
-      // Capture isMyTurn at the time of detection (before backend switches turn)
-      const wasMyTurnAtDetection = isMyTurn;
-      console.log('[Double Six] Setting up timer', { wasAIDoubleSix, wasMyTurnAtDetection, rollKey });
+      console.log('[Double Six] Setting up timer', { wasAIDoubleSix, isMyTurn, rollKey });
       
       // After 3 seconds: hide modal, set isDoubleSix to false
-      // Only call onHold() if it was the PLAYER who rolled it (not AI - backend already switched turn for AI)
+      // IMPORTANT: Backend already switches turn for double six, so we should NEVER call onHold()
+      // The backend handles the turn switch automatically when double six is rolled
       const timer = setTimeout(() => {
-        console.log('[Double Six] Timer expired, closing modal', { wasAIDoubleSix, wasMyTurnAtDetection });
+        console.log('[Double Six] Timer expired, closing modal', { wasAIDoubleSix });
         setShowDoubleSixMessage(false);
         setIsDoubleSix(false);
-        // Only end the turn if the PLAYER rolled it (not AI)
-        // For AI double six, backend already switched turn, so don't call onHold()
-        if (!wasAIDoubleSix && wasMyTurnAtDetection) {
-          console.log('[Double Six] Player rolled it, calling onHold()');
-          onHold();
-        } else {
-          console.log('[Double Six] AI rolled it or not my turn, skipping onHold()');
-        }
+        // Backend already switched turn for double six, so don't call onHold()
+        // This applies to both player and AI double six
+        console.log('[Double Six] Backend already handled turn switch, skipping onHold()');
         // Don't reset lastDoubleSixRollRef here - keep it to prevent modal from showing again
         // It will be reset when lastRoll changes to a non-double-six
         // Reset AI flag for next time
@@ -152,7 +146,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         isAIDoubleSixRef.current = false;
       }
     }
-  }, [lastRoll, isDoubleSix, onHold]);
+  }, [lastRoll, isDoubleSix]);
 
   useEffect(() => {
     if (isRolling) {
@@ -208,18 +202,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
           aria-label="close"
           onClick={() => {
             // Allow manual close
-            const wasAIDoubleSix = isAIDoubleSixRef.current;
-            console.log('[Double Six] Manual close', { wasAIDoubleSix, isMyTurn });
+            console.log('[Double Six] Manual close');
             setShowDoubleSixMessage(false);
             setIsDoubleSix(false);
-            // Only end the turn if the PLAYER rolled it (not AI)
-            // For AI double six, backend already switched turn, so don't call onHold()
-            if (!wasAIDoubleSix && isMyTurn) {
-              console.log('[Double Six] Manual close - Player rolled it, calling onHold()');
-              onHold();
-            } else {
-              console.log('[Double Six] Manual close - AI rolled it or not my turn, skipping onHold()');
-            }
+            // Backend already switched turn for double six, so don't call onHold()
+            // This applies to both player and AI double six
+            console.log('[Double Six] Manual close - Backend already handled turn switch, skipping onHold()');
             // Don't reset lastDoubleSixRollRef - keep it to prevent modal from showing again for this roll
             // It will be reset when lastRoll changes to a non-double-six
             // Reset AI flag for next time
@@ -252,16 +240,17 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
       {/* Game Over Message */}
       {game.status === 'finished' && (
-        game.winnerId ? (
-          <Alert severity="success" sx={{ mb: 2, textAlign: 'center' }}>
-            <Typography variant="h5" component="strong">
-              {game.winnerId === game.player1.id ? game.player1.username : game.player2.username} Wins!
-            </Typography>
-          </Alert>
-        ) : (
+        // Check for tie: either no winnerId, or both scores are equal
+        (!game.winnerId || game.player1Score === game.player2Score) ? (
           <Alert severity="info" sx={{ mb: 2, textAlign: 'center' }}>
             <Typography variant="h5" component="strong">
               It's a Tie! Both players have {game.player1Score} points.
+            </Typography>
+          </Alert>
+        ) : (
+          <Alert severity="success" sx={{ mb: 2, textAlign: 'center' }}>
+            <Typography variant="h5" component="strong">
+              {game.winnerId === game.player1.id ? game.player1.username : game.player2.username} Wins!
             </Typography>
           </Alert>
         )

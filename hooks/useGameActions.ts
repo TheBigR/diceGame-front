@@ -76,6 +76,13 @@ export function useGameActions({
 
       if (response.isDoubleSix) {
         soundManager.playDoubleSix();
+        // Double six - backend should have switched turn, refresh game state to ensure sync
+        try {
+          const refreshedState = await apiClient.getGameState(currentGameState.id);
+          onGameUpdate(refreshedState);
+        } catch (err) {
+          console.warn('Failed to refresh game state after double six:', err);
+        }
         // Don't clear lastRoll here - let the component handle it after showing the dialog
       }
 
@@ -251,6 +258,10 @@ export function useGameActions({
           : updatedGame.player2;
         storage.incrementWin(winner.userId);
         soundManager.playWin();
+      } else if (updatedGame.status === 'finished' && !updatedGame.winnerId) {
+        // It's a tie - both players have the same score
+        console.log('Game ended in a tie - both players have', updatedGame.player1Score, 'points');
+        // Don't increment wins for either player in a tie
       }
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to end game';
